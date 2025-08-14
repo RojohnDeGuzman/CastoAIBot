@@ -21,9 +21,14 @@ WEBSITE_SOURCE = "https://www.travelpress.com/"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Setup OpenAI-style client for Groq
+if not GROQ_API_KEY:
+    print("⚠️  WARNING: GROQ_API_KEY environment variable is not set.")
+    print("   Please set it in Vercel environment variables")
+    # Don't raise error, just warn
+
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
-    api_key=GROQ_API_KEY
+    api_key=GROQ_API_KEY or "dummy_key"
 )
 
 # Cache for website data (in-memory for serverless)
@@ -147,6 +152,9 @@ def chat():
 
     # Step 3: Get a response from the chatbot
     try:
+        if not GROQ_API_KEY:
+            return jsonify({"error": "GROQ_API_KEY not configured in Vercel"}), 500
+            
         logging.info("Fetching response from the chatbot.")
         response = client.chat.completions.create(
             model="llama3-8b-8192",  # or "mixtral-8x7b-32768"
@@ -184,6 +192,9 @@ def health_check():
         }
     })
 
-# For local development
+# For Vercel serverless deployment
+app.debug = False
+
+# Export the Flask app for Vercel
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=9000)
