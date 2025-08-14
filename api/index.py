@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import groq
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -166,10 +165,23 @@ def chat():
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
             website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
 
-        # Step 3: Get a response from the chatbot using Groq
+        # Step 3: Get a response from the chatbot using Groq (your original working setup)
         try:
-            # Initialize Groq client
-            client = groq.Groq(api_key=GROQ_API_KEY)
+            # Import OpenAI client in isolation to avoid any conflicts
+            import openai
+            
+            # Setup OpenAI-style client for Groq with isolated initialization
+            try:
+                # Create client with minimal parameters
+                client = openai.OpenAI(
+                    api_key=GROQ_API_KEY
+                )
+                # Set base URL after creation
+                client.base_url = "https://api.groq.com/openai/v1"
+                
+            except Exception as e:
+                logging.error(f"Failed to create OpenAI client: {e}")
+                return jsonify({"error": f"Client initialization failed: {str(e)}"}), 500
             
             logging.info("Fetching response from Groq.")
             response = client.chat.completions.create(
