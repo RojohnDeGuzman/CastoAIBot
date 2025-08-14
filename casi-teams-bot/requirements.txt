@@ -1,0 +1,22 @@
+# CASI Teams Bot Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+aiohttp>=3.8.0
+python-dotenv>=0.19.0
+
+# Bot Framework (we'll add these later)
+# botbuilder-core>=4.20.0
+# botbuilder-schema>=4.20.0
+# botbuilder-ai>=4.20.0
+
+# Additional utilities
+requests>=2.25.0
+asyncio-mqtt>=0.11.0
+
+# Microsoft Graph API for Teams integration
+msal>=1.25.0
+azure-identity>=1.15.0
+
+# Interactive authentication support
+webbrowser  # Built-in Python module

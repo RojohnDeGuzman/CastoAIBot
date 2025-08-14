@@ -1,0 +1,16 @@
+[
+    {
+      "question": "How do I reset my password?",
+      "answer": "To reset your password, go to the login page and click on 'Forgot Password'. Follow the instructions sent to your email."
+    },
+    {
+      "question": "Why is my internet not working?",
+      "answer": "Check if the network cable is properly connected or restart your router. You can also run the Windows Network Troubleshooter."
+    },
+    {
+      "question": "How do I connect to the VPN?",
+      "answer": "Use the company VPN client and enter your credentials. Make sure you are connected to the internet before attempting to connect."
+    }
+
+    
+  ]
