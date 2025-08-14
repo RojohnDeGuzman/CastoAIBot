@@ -172,12 +172,11 @@ def chat():
             
             # Setup OpenAI-style client for Groq with isolated initialization
             try:
-                # Create client with minimal parameters
+                # Create client with minimal parameters for version 1.66.3
                 client = openai.OpenAI(
-                    api_key=GROQ_API_KEY
+                    api_key=GROQ_API_KEY,
+                    base_url="https://api.groq.com/openai/v1"
                 )
-                # Set base URL after creation
-                client.base_url = "https://api.groq.com/openai/v1"
                 
             except Exception as e:
                 logging.error(f"Failed to create OpenAI client: {e}")
