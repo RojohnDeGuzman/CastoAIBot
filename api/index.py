@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from openai import OpenAI
+import groq
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -166,15 +166,12 @@ def chat():
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
             website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
 
-        # Step 3: Get a response from the chatbot
+        # Step 3: Get a response from the chatbot using Groq
         try:
-            # Initialize OpenAI client for Groq
-            client = OpenAI(
-                base_url="https://api.groq.com/openai/v1",
-                api_key=GROQ_API_KEY
-            )
+            # Initialize Groq client
+            client = groq.Groq(api_key=GROQ_API_KEY)
             
-            logging.info("Fetching response from the chatbot.")
+            logging.info("Fetching response from Groq.")
             response = client.chat.completions.create(
                 model="llama3-8b-8192",  # or "mixtral-8x7b-32768"
                 messages=[
@@ -185,7 +182,7 @@ def chat():
             )
 
             chatbot_message = response.choices[0].message.content
-            logging.info("Answer fetched from the chatbot.")
+            logging.info("Answer fetched from Groq.")
 
             # Combine the chatbot's response with the website's response
             combined_response = chatbot_message
@@ -196,7 +193,7 @@ def chat():
         
         except Exception as e:
             # If an error occurs, return an error message
-            logging.error(f"Error during chatbot response: {str(e)}")
+            logging.error(f"Error during Groq response: {str(e)}")
             return jsonify({"error": str(e)}), 500
     
     except Exception as e:
