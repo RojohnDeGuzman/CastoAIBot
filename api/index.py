@@ -52,29 +52,53 @@ def chat():
         
         user_input = data["message"]
         
+        # Try to import OpenAI client
+        try:
+            from openai import OpenAI
+        except ImportError as e:
+            return jsonify({
+                "error": "OpenAI library not available",
+                "details": str(e),
+                "message": "Please check if 'openai' is in requirements.txt"
+            }), 500
+        
         # Initialize OpenAI client for Groq
-        from openai import OpenAI
-        client = OpenAI(
-            base_url="https://api.groq.com/openai/v1",
-            api_key=GROQ_API_KEY
-        )
+        try:
+            client = OpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=GROQ_API_KEY
+            )
+        except Exception as e:
+            return jsonify({
+                "error": "Failed to initialize OpenAI client",
+                "details": str(e)
+            }), 500
         
         # Get AI response from Groq
-        response = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant named CASI."},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.7
-        )
-        
-        ai_response = response.choices[0].message.content
-        
-        return jsonify({"response": ai_response})
+        try:
+            response = client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant named CASI."},
+                    {"role": "user", "content": user_input}
+                ],
+                temperature=0.7
+            )
+            
+            ai_response = response.choices[0].message.content
+            return jsonify({"response": ai_response})
+            
+        except Exception as e:
+            return jsonify({
+                "error": "Failed to get AI response from Groq",
+                "details": str(e)
+            }), 500
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": "Unexpected error in chat endpoint",
+            "details": str(e)
+        }), 500
 
 # For Vercel serverless deployment
 app.debug = False
