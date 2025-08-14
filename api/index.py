@@ -1,8 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-import logging
-from openai import OpenAI
 
 # For Vercel serverless deployment
 app = Flask(__name__)
@@ -11,31 +9,19 @@ CORS(app)
 # Environment variables for Vercel
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-
-# Setup OpenAI-style client for Groq
-client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=GROQ_API_KEY
-)
-
 @app.route("/", methods=["GET"])
 def health_check():
     """Simple health check endpoint"""
-    try:
-        return jsonify({
-            "status": "healthy", 
-            "message": "CASI Backend API is running on Vercel",
-            "api_key_configured": bool(GROQ_API_KEY),
-            "endpoints": {
-                "chat": "/chat",
-                "knowledge": "/knowledge",
-                "health": "/"
-            }
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({
+        "status": "healthy", 
+        "message": "CASI Backend API is running on Vercel",
+        "api_key_configured": bool(GROQ_API_KEY),
+        "endpoints": {
+            "chat": "/chat",
+            "knowledge": "/knowledge",
+            "health": "/"
+        }
+    })
 
 @app.route("/test", methods=["GET"])
 def test_endpoint():
@@ -45,18 +31,12 @@ def test_endpoint():
 @app.route('/knowledge', methods=['GET'])
 def get_knowledge():
     """Get knowledge base entries"""
-    try:
-        return jsonify([])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify([])
 
 @app.route('/knowledge', methods=['POST'])
 def add_knowledge():
     """Add knowledge base entry"""
-    try:
-        return jsonify({"success": True, "message": "Knowledge added successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"success": True, "message": "Knowledge added successfully"})
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -72,22 +52,12 @@ def chat():
         
         user_input = data["message"]
         
-        # Get AI response from Groq
-        response = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant named CASI."},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.7
-        )
-        
-        ai_response = response.choices[0].message.content
-        
-        return jsonify({"response": ai_response})
+        # For now, return a simple response until we confirm it's working
+        return jsonify({
+            "response": f"Hello! I'm CASI. You said: '{user_input}'. AI integration coming soon!"
+        })
         
     except Exception as e:
-        logging.error(f"Error in chat endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # For Vercel serverless deployment
