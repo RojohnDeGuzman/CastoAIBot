@@ -52,10 +52,26 @@ def chat():
         
         user_input = data["message"]
         
-        # For now, return a simple response until we confirm it's working
-        return jsonify({
-            "response": f"Hello! I'm CASI. You said: '{user_input}'. AI integration coming soon!"
-        })
+        # Initialize OpenAI client for Groq
+        from openai import OpenAI
+        client = OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=GROQ_API_KEY
+        )
+        
+        # Get AI response from Groq
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant named CASI."},
+                {"role": "user", "content": user_input}
+            ],
+            temperature=0.7
+        )
+        
+        ai_response = response.choices[0].message.content
+        
+        return jsonify({"response": ai_response})
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
