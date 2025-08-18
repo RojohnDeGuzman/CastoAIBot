@@ -908,11 +908,13 @@ Could you please let me know what specific part you'd like me to clarify about C
     if any(word in user_input_lower for word in ["internet", "slow", "connection", "vpn", "password", "computer", "troubleshoot", "problem", "issue", "help"]):
         return handle_it_troubleshooting(user_input, conversation_context)
     
-    # Handle CASI meaning questions
+    # Handle CASI identity questions (highest priority)
     if check_casi_meaning_question(user_input):
-        return """Great question! CASI stands for "Casto Assistance and Support Intelligence." 
-
-I'm your specialized AI assistant designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details. I'm here to help you with any questions you have about Casto Travel Philippines! 😊"""
+        return get_casi_identity_response()
+    
+    # Handle casual CASI mentions
+    if check_casi_identity_question(user_input):
+        return get_casi_name_only_response()
     
     return None  # Let the main logic handle other cases
 
@@ -1148,7 +1150,7 @@ def analyze_and_synthesize_info(knowledge_entries, enhanced_info, user_query):
     return combined_info
 
 def check_casi_meaning_question(user_input):
-    """Check if user is asking what CASI stands for."""
+    """Check if user is asking what CASI stands for or about CASI's identity."""
     user_input_lower = user_input.lower()
     casi_meaning_keywords = [
         "what does casi stand for",
@@ -1159,10 +1161,44 @@ def check_casi_meaning_question(user_input):
         "what's casi",
         "what is casi short for",
         "explain casi",
-        "define casi"
+        "define casi",
+        "who are you",
+        "what's your name",
+        "what is your name",
+        "tell me about yourself",
+        "introduce yourself",
+        "who is casi",
+        "casi who",
+        "your name",
+        "your identity"
         ]
     
     return any(keyword in user_input_lower for keyword in casi_meaning_keywords)
+
+def check_casi_identity_question(user_input):
+    """Check if user is asking about CASI's identity or name."""
+    user_input_lower = user_input.lower()
+    casi_identity_keywords = [
+        "casi", "your name", "who are you", "introduce", "identity",
+        "what should i call you", "how do i address you", "what's your name"
+    ]
+    
+    # Check if CASI is mentioned or identity is being asked
+    return any(keyword in user_input_lower for keyword in casi_identity_keywords)
+
+def get_casi_identity_response():
+    """Get CASI's standard identity response."""
+    return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
+
+**CASI** stands for **"Casto Assistance and Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
+
+I'm here to help you with any questions you have about Casto Travel Philippines, and I can also assist with general knowledge and IT troubleshooting! 😊
+
+How can I assist you today?"""
+
+def get_casi_name_only_response():
+    """Get CASI's name-only response for casual mentions."""
+    return """Yes, I'm **CASI**! How can I help you today? 😊"""
 
 def check_knowledge_base_for_person(user_input, knowledge_entries):
     """Check if we have knowledge base entries for specific people."""
@@ -1525,9 +1561,17 @@ def chat():
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
-        system_prompt = """You are CASI, a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
+        system_prompt = """You are **CASI** - a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
 
-IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. Only explain what CASI stands for ("Casto Assistance and Support Intelligence") when someone specifically asks what CASI means or stands for."""
+**CRITICAL IDENTITY INSTRUCTIONS:**
+1. **ALWAYS introduce yourself as "CASI"** in your responses
+2. **NEVER forget your name is CASI** - use it consistently
+3. **When asked about your name or identity**, always say you are CASI
+4. **When asked what CASI stands for**, always explain: "CASI stands for 'Casto Assistance and Support Intelligence'"
+5. **Use "I'm CASI" or "As CASI"** in your responses to reinforce your identity
+6. **Your full name is CASI** - this is non-negotiable
+
+**CASI = Casto Assistance and Support Intelligence** - remember this ALWAYS!"""
         
         if knowledge_context:
             system_prompt += "\n\nCRITICAL INSTRUCTION: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
@@ -1684,6 +1728,10 @@ This information comes directly from the official Casto Travel Philippines websi
             temperature=0.7
         )
         chatbot_message = response.choices[0].message.content
+
+        # Ensure CASI always identifies herself in responses
+        if not any(phrase in chatbot_message.lower() for phrase in ["i'm casi", "as casi", "casi here", "this is casi"]):
+            chatbot_message = f"I'm CASI, and {chatbot_message[0].lower() + chatbot_message[1:]}"
 
         combined_response = chatbot_message
         if website_data and "No relevant information found" not in website_data:
