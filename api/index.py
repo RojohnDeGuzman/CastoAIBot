@@ -65,10 +65,43 @@ session.headers.update({
 
 @lru_cache(maxsize=100)
 def get_cached_knowledge():
-    """Cache knowledge retrieval - simplified for Vercel hosting"""
-    # For Vercel, return empty knowledge base
-    # You can implement cloud database integration later
-    return []
+    """Cache knowledge retrieval - load from embedded knowledge base for Vercel hosting"""
+    # For Vercel, return embedded knowledge base since we can't access local files
+    embedded_knowledge = [
+        {
+            "question": "Who is Maryles Casto?",
+            "answer": "MARYLES CASTO - Founder & Chairperson. After 40+ years of traversing through the travel industry's ebbs and flows; and changes in Silicon Valley, Maryles sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines, providing knowledge, insight, and inspiration in several capacities, including client interactions, organizing exclusive journeys, and steering the company with her leadership and strategic vision."
+        },
+        {
+            "question": "Who is Marc Casto?",
+            "answer": "MARC CASTO is the CEO of Casto Travel Philippines (CTP) as well as its holding company MVC Solutions (MVC). Marc is assiduously focused upon the strategy, execution, and operations of the company all while ensuring it is in accord with its financial, ethical, and social requirements. He is highly driven and consistently intent upon exceeding growth goals while investing in innovative solutions to propel the industry forwards. As one of the founding members of CTP and MVC, Marc was critical in the formation of the organizations and propelling its early success."
+        },
+        {
+            "question": "Who is Elaine Randrup?",
+            "answer": "ELAINE RANDRUP is the Vice President of Operations at Casto Travel Philippines. Elaine, VP of Operations, leads our Travel and Fulfillment Center operations. Educated in Business Administration, Elaine found her passion for the travel industry beginning as a Travel Counselor for Peoplesupport and American Express Travel Singapore. Her move back to the Philippines brings Casto years of experience as a travel expert as well as client services and operations management."
+        },
+        {
+            "question": "Who is Alwin Benedicto?",
+            "answer": "ALWIN BENEDICTO, CPA is the Chief Financial Officer of Casto Travel Philippines. A Certified Public Accountant, duly accredited Public Accounting Practitioner by the Philippine Board of Accountancy, and accredited Tax Practitioner by the Bureau of Internal Revenue. Alwin brings more than 20 years of experience in the fields of Taxation, Financial Audits, Planning and Analysis, and different areas of Finance. Prior to joining Casto, he worked in leadership roles for different industries, including BPO/KPO (Innodata, Inc), FinTech (C88 Financial Technologies, Ltd), Supply Chain and Logistics (Ayala Corporation Logistics Group). He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances for Casto."
+        },
+        {
+            "question": "Who is George Anzures?",
+            "answer": "GEORGE ANZURES is the IT Director of Casto Travel Philippines."
+        },
+        {
+            "question": "Who is Ma. Berdandina Galvez?",
+            "answer": "MA. BERDANDINA GALVEZ is the HR Director of Casto Travel Philippines."
+        },
+        {
+            "question": "What is Casto Travel Philippines?",
+            "answer": "Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. They offer domestic and international travel packages, hotel bookings, tour packages, travel insurance, corporate travel management, and group travel arrangements."
+        },
+        {
+            "question": "Who is the CEO of Casto Travel Philippines?",
+            "answer": "The current CEO of Casto Travel Philippines is Marc Casto. Maryles Casto is the founder, and Marc Casto continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions."
+        }
+    ]
+    return embedded_knowledge
 
 def fetch_website_data(url, query=None):
     """Fetch and parse data from a website with caching."""
@@ -798,8 +831,10 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
             # Find the relevant knowledge base entry
             for entry in knowledge_entries:
                 if person in entry.get('question', '').lower() or person in entry.get('answer', '').lower():
+                    logging.info(f"Found knowledge base entry for {person}: {entry.get('answer', '')[:100]}...")
                     return entry.get('answer', '')
     
+    logging.info(f"No knowledge base entry found for query: {user_input}")
     return None
 
 
