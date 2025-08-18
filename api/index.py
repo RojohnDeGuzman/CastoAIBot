@@ -1865,7 +1865,7 @@ def test_endpoint():
     
     return jsonify({
         "status": "success",
-        "message": "Backend is reachable and responding",
+        "message": "Backend is reachable and responding - CASI Identity System Updated!",
         "timestamp": datetime.utcnow().isoformat(),
         "endpoint": "/test",
         "knowledge_base_test": {
