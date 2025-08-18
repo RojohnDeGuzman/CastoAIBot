@@ -427,6 +427,21 @@ def understand_user_intent(user_input, conversation_context):
         "casto travel", "casto philippines", "casto group", "casto travel philippines"
     ]
     
+    # Check for specific person name searches SECOND (high priority)
+    # This will catch queries like "Who is Elaine Randrup?" or "Is Alwin Benedicto mentioned?"
+    person_search_patterns = [
+        "who is", "is there", "do you know", "tell me about", "what about",
+        "elaine randrup", "alwin benedicto", "john smith", "jane doe"  # Add common names
+    ]
+    
+    # Check if this is a person search query
+    if any(pattern in user_input_lower for pattern in person_search_patterns):
+        return {
+            'intent': 'person_search',
+            'context_clues': ['person_inquiry'],
+            'is_follow_up': False
+        }
+    
     # Check for general knowledge questions SECOND (high priority)
     general_question_keywords = [
         "what is", "who is", "when is", "where is", "why is", "how is",
@@ -521,6 +536,11 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
     # Handle travel/tourism questions THIRD (medium priority)
     if intent_analysis['intent'] == 'travel_question':
         # Let the main logic handle travel questions with enhanced search
+        return None
+    
+    # Handle person search questions (high priority)
+    if intent_analysis['intent'] == 'person_search':
+        # Let the main logic handle person searches with website and web search
         return None
     
     # Handle greetings
@@ -735,6 +755,72 @@ def check_incorrect_ceo_claims(user_input):
             return True, incorrect_name
     
     return False, None
+
+def search_person_on_casto_website(person_name):
+    """Search for a specific person on Casto Travel websites."""
+    try:
+        person_results = []
+        
+        # Search on main Casto website
+        casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
+        if casto_main_data and "No relevant information found" not in casto_main_data:
+            person_results.append({
+                'source': 'Casto Main Website',
+                'data': casto_main_data,
+                'found': True
+            })
+        
+        # Search on Casto Travel website
+        casto_travel_data = fetch_website_data(CASTO_TRAVEL_WEBSITE, person_name)
+        if casto_travel_data and "No relevant information found" not in casto_travel_data:
+            person_results.append({
+                'source': 'Casto Travel Website',
+                'data': casto_travel_data,
+                'found': True
+            })
+        
+        # Also perform web search for broader context
+        web_search_results = smart_web_search(person_name)
+        if web_search_results:
+            person_results.append({
+                'source': 'Web Search',
+                'data': web_search_results,
+                'found': True
+            })
+        
+        return person_results
+        
+    except Exception as e:
+        logging.error(f"Error searching for person {person_name}: {e}")
+        return []
+
+def extract_person_name_from_query(user_input):
+    """Extract person name from user query."""
+    user_input_lower = user_input.lower()
+    
+    # Common patterns for person queries
+    patterns = [
+        "who is", "is there", "do you know", "tell me about", "what about",
+        "can you find", "search for", "look for", "find information about"
+    ]
+    
+    # Remove common question words to get the person's name
+    for pattern in patterns:
+        if pattern in user_input_lower:
+            person_name = user_input_lower.replace(pattern, "").strip()
+            # Clean up the name (remove extra spaces, punctuation)
+            person_name = " ".join(person_name.split())
+            return person_name
+    
+    # If no pattern found, try to extract what looks like a name
+    words = user_input.split()
+    if len(words) >= 2:
+        # Look for capitalized words that might be names
+        potential_names = [word for word in words if word[0].isupper() and len(word) > 2]
+        if potential_names:
+            return " ".join(potential_names)
+    
+    return None
 
 def create_casto_direct_response(user_input, knowledge_entries, website_data):
     """Create a direct response for Casto Travel questions using knowledge base only."""
@@ -970,6 +1056,33 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         except Exception as e:
             logging.error(f"Error fetching travel search results: {e}")
             enhanced_info = None
+    
+    # Step 4: Check if this is a person search question (high priority)
+    elif intent_analysis.get('intent') == 'person_search':
+        logging.info(f"PERSON SEARCH DETECTED: {user_input}")
+        # Extract person name from query
+        person_name = extract_person_name_from_query(user_input)
+        if person_name:
+            logging.info(f"Searching for person: {person_name}")
+            # Search for person on Casto websites and web
+            person_results = search_person_on_casto_website(person_name)
+            if person_results:
+                enhanced_info = person_results
+                logging.info(f"Person search results found: {len(person_results)} sources")
+                # Add person search context to system prompt
+                system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. Use the following search results to provide information:"
+                for result in person_results[:3]:  # Top 3 results
+                    if isinstance(result['data'], list):
+                        for item in result['data'][:2]:  # Top 2 items per source
+                            system_prompt += f"\n- {result['source']}: {item.get('title', '')} - {item.get('snippet', '')[:150]}..."
+                    else:
+                        system_prompt += f"\n- {result['source']}: {result['data'][:200]}..."
+            else:
+                enhanced_info = None
+                logging.info(f"No person search results found for: {person_name}")
+        else:
+            enhanced_info = None
+            logging.info("Could not extract person name from query")
     # Step 2: Check if the question is relevant to other CASTO topics
     elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
         logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
