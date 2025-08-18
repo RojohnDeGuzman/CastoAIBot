@@ -91,7 +91,7 @@ def fetch_website_data(url, query=None):
         return error_msg
 
 def fetch_casto_travel_info(query=None):
-    """Fetch specific information about Casto Travel Philippines."""
+    """Fetch comprehensive information about Casto Travel Philippines from casto.com.ph."""
     cache_key = f"casto_travel:{query}"
     current_time = time.time()
     
@@ -102,64 +102,149 @@ def fetch_casto_travel_info(query=None):
             return cached_data
     
     try:
-        # Try Casto Travel Philippines website first
-        response = session.get(CASTO_TRAVEL_WEBSITE, timeout=10)
+        # Fetch from Casto main website
+        response = session.get(CASTO_WEBSITE, timeout=15)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            title = soup.title.string if soup.title else "Casto Travel Philippines"
+            title = soup.title.string if soup.title else "Casto - Growth Reimagined"
             
-            # Extract key information
-            info_sections = []
+            # Extract comprehensive information
+            comprehensive_info = []
+            comprehensive_info.append(f"# {title}")
+            comprehensive_info.append("")
             
-            # Look for main content areas
-            main_content = soup.find('main') or soup.find('div', class_='content') or soup.find('div', class_='main')
-            if main_content:
-                # Get headings and paragraphs
-                headings = main_content.find_all(['h1', 'h2', 'h3'])
-                paragraphs = main_content.find_all('p')
-                
-                for heading in headings[:5]:  # Limit to first 5 headings
-                    heading_text = heading.get_text().strip()
-                    if heading_text:
-                        info_sections.append(f"## {heading_text}")
-                
-                for paragraph in paragraphs[:10]:  # Limit to first 10 paragraphs
+            # Company Overview
+            company_news = soup.find(string=lambda text: 'COMPANY NEWS:' in str(text))
+            if company_news:
+                news_parent = company_news.parent
+                if news_parent:
+                    news_text = news_parent.get_text().strip()
+                    comprehensive_info.append("## Company News")
+                    comprehensive_info.append(news_text)
+                    comprehensive_info.append("")
+            
+            # Main Services
+            comprehensive_info.append("## Core Services")
+            
+            # Agency Support
+            agency_support = soup.find(string=lambda text: 'TRAVEL AGENCY SUPPORT' in str(text))
+            if agency_support:
+                support_section = agency_support.find_parent()
+                if support_section:
+                    support_text = support_section.get_text().strip()
+                    comprehensive_info.append("### Travel Agency Support")
+                    comprehensive_info.append(support_text)
+                    comprehensive_info.append("")
+            
+            # Agent & Concierge Services
+            agent_services = soup.find(string=lambda text: 'AGENT & CONCIERGE SERVICES' in str(text))
+            if agent_services:
+                agent_section = agent_services.find_parent()
+                if agent_section:
+                    agent_text = agent_section.get_text().strip()
+                    comprehensive_info.append("### Agent & Concierge Services")
+                    comprehensive_info.append(agent_text)
+                    comprehensive_info.append("")
+            
+            # Accounting Services
+            accounting_services = soup.find(string=lambda text: 'ACCOUNTING SERVICES' in str(text))
+            if accounting_services:
+                accounting_section = accounting_services.find_parent()
+                if accounting_section:
+                    accounting_text = accounting_section.get_text().strip()
+                    comprehensive_info.append("### Accounting Services")
+                    comprehensive_info.append(accounting_text)
+                    comprehensive_info.append("")
+            
+            # Company Description
+            company_desc = soup.find(string=lambda text: 'We use our experience, technology and global partnerships' in str(text))
+            if company_desc:
+                desc_parent = company_desc.parent
+                if desc_parent:
+                    desc_text = desc_parent.get_text().strip()
+                    comprehensive_info.append("## Company Description")
+                    comprehensive_info.append(desc_text)
+                    comprehensive_info.append("")
+            
+            # Casto University
+            university_section = soup.find(string=lambda text: 'Casto University' in str(text))
+            if university_section:
+                uni_parent = university_section.parent
+                if uni_parent:
+                    uni_text = uni_parent.get_text().strip()
+                    comprehensive_info.append("## Casto University")
+                    comprehensive_info.append(uni_text)
+                    comprehensive_info.append("")
+            
+            # Client Reviews
+            comprehensive_info.append("## What Our Clients Say")
+            reviews_section = soup.find(string=lambda text: 'WHAT OUR CLIENTS SAY ABOUT US' in str(text))
+            if reviews_section:
+                reviews_parent = reviews_section.parent
+                if reviews_parent:
+                    # Find review text
+                    review_texts = reviews_parent.find_all(string=True)
+                    for text in review_texts:
+                        if text.strip() and len(text.strip()) > 20:
+                            comprehensive_info.append(f"• {text.strip()}")
+                    comprehensive_info.append("")
+            
+            # Local Footprint
+            footprint_section = soup.find(string=lambda text: 'EXPANDING OUR LOCAL FOOTPRINT' in str(text))
+            if footprint_section:
+                footprint_parent = footprint_section.parent
+                if footprint_parent:
+                    footprint_text = footprint_parent.get_text().strip()
+                    comprehensive_info.append("## Local Footprint")
+                    comprehensive_info.append(footprint_text)
+                    comprehensive_info.append("")
+            
+            # Accreditations
+            comprehensive_info.append("## Accreditations & Certifications")
+            accreditations = [
+                "ISO 27001:2013 Certified by GICG and JAS-ANZ",
+                "International Air Transport Associated Accredited Agent",
+                "ASTA - American Society of Travel Advisors",
+                "PCI-DSS Certified by Crossbow Labs",
+                "Philippine Travel Agencies Association (PTAA) Accredited Member",
+                "Philippine IATA Agency Association (PIATA) Member",
+                "Philippine Tour Operators Association (PHILTOA) Accredited Member"
+            ]
+            for acc in accreditations:
+                comprehensive_info.append(f"• {acc}")
+            comprehensive_info.append("")
+            
+            # Founder Information
+            founder_section = soup.find(string=lambda text: 'Our founder, Maryles Casto' in str(text))
+            if founder_section:
+                founder_parent = founder_section.parent
+                if founder_parent:
+                    founder_text = founder_parent.get_text().strip()
+                    comprehensive_info.append("## Founder")
+                    comprehensive_info.append(founder_text)
+                    comprehensive_info.append("")
+            
+            # Contact Information
+            comprehensive_info.append("## Contact Information")
+            comprehensive_info.append("Website: https://www.casto.com.ph/")
+            comprehensive_info.append("")
+            
+            # Combine all information
+            if len(comprehensive_info) > 2:  # More than just title
+                result = "\n".join(comprehensive_info)
+            else:
+                # Fallback to basic extraction
+                paragraphs = soup.find_all('p')
+                basic_info = []
+                for paragraph in paragraphs[:20]:
                     para_text = paragraph.get_text().strip()
-                    if para_text and len(para_text) > 20:  # Only meaningful paragraphs
-                        info_sections.append(para_text)
-            
-            if info_sections:
-                result = f"Title: {title}\n\nCasto Travel Philippines Information:\n\n" + "\n\n".join(info_sections)
-            else:
-                result = f"Title: {title}\n\nCasto Travel Philippines - Your trusted travel partner in the Philippines."
-            
-            website_cache[cache_key] = (result, current_time)
-            return result
-            
-    except Exception as e:
-        logging.warning(f"Could not fetch from Casto Travel website: {str(e)}")
-    
-    # Fallback to Casto main website
-    try:
-        response = session.get(CASTO_WEBSITE, timeout=10)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            title = soup.title.string if soup.title else "Casto Group"
-            
-            # Look for travel-related content
-            travel_content = []
-            paragraphs = soup.find_all('p')
-            
-            for paragraph in paragraphs[:15]:
-                para_text = paragraph.get_text().strip()
-                if any(keyword in para_text.lower() for keyword in ['travel', 'tourism', 'philippines', 'casto']):
-                    if len(para_text) > 20:
-                        travel_content.append(para_text)
-            
-            if travel_content:
-                result = f"Title: {title}\n\nCasto Travel Information:\n\n" + "\n\n".join(travel_content[:5])
-            else:
-                result = f"Title: {title}\n\nCasto Group - Providing travel and tourism services in the Philippines."
+                    if para_text and len(para_text) > 20:
+                        basic_info.append(para_text)
+                
+                if basic_info:
+                    result = f"Title: {title}\n\nCasto Travel Philippines Information:\n\n" + "\n\n".join(basic_info[:10])
+                else:
+                    result = f"Title: {title}\n\nCasto Travel Philippines - Comprehensive travel services and support."
             
             website_cache[cache_key] = (result, current_time)
             return result
@@ -167,20 +252,51 @@ def fetch_casto_travel_info(query=None):
     except Exception as e:
         logging.error(f"Error fetching Casto information: {str(e)}")
     
-    # Return default information if all else fails
-    default_info = """Casto Travel Philippines
+    # Return comprehensive default information if all else fails
+    default_info = """# Casto Travel Philippines
 
-Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+## Company Overview
+Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. The company has been making its mark in the travel industry for more than 35 years.
 
-Services typically include:
-• Domestic and international travel packages
-• Hotel bookings and reservations
-• Tour packages and excursions
-• Travel insurance and documentation
-• Corporate travel management
-• Group travel arrangements
+## Company News
+Casto Travel Philippines and MVC Solutions are now unified under one brand—CASTO!
 
-For the most current information, please visit their official website at https://www.casto.com.ph/ or contact them directly."""
+## Core Services
+
+### Travel Agency Support
+Behind the scenes support for your frontline agents. Our travel agents are ready to support your frontline agents from behind the scenes to ensure reservations are ticketed and confirmed, including special requests.
+
+### Agent & Concierge Services
+With over 10 years of experience, our travel consultants provide high-quality customer service while ensuring travel policy compliance, 24 hours a day, 7 days a week.
+
+### Accounting Services
+Accounting professionals trained in travel accounting operations, with multi GDS and varied accounting system experience, deliver high level accounting services.
+
+## Company Description
+We use our experience, technology and global partnerships to bring travel management companies the best possible travel industry services.
+
+## Casto University
+With our years of experience, leadership, and emphasis on training, we set out to pioneer a travel university.
+
+## Local Footprint
+We have been making our mark in the travel industry for more than 35 years. Our Filipino-owned business, with beginnings in California's Silicon Valley, has two offices in the heart of Metro Manila. We now bring this company of highly skilled professionals to the City of Smiles - BACOLOD!
+
+## Accreditations & Certifications
+• ISO 27001:2013 Certified by GICG and JAS-ANZ
+• International Air Transport Associated Accredited Agent
+• ASTA - American Society of Travel Advisors
+• PCI-DSS Certified by Crossbow Labs
+• Philippine Travel Agencies Association (PTAA) Accredited Member
+• Philippine IATA Agency Association (PIATA) Member
+• Philippine Tour Operators Association (PHILTOA) Accredited Member
+
+## Founder
+Our founder, Maryles Casto, has written a book all about her travel industry experiences...from flight attendant to owning one of the top travel companies in Silicon Valley!
+
+## Contact Information
+Website: https://www.casto.com.ph/
+
+For the most current information and to access their services, please visit their official website or contact them directly."""
     
     website_cache[cache_key] = (default_info, current_time)
     return default_info
