@@ -143,12 +143,44 @@ def fetch_website_data(url, query=None):
         # Extract the title
         title = soup.title.string if soup.title else "No title found"
         
-        # Search for the query in all paragraphs
-        paragraphs = soup.find_all('p')
         if query:
-            for paragraph in paragraphs:
-                if query.lower() in paragraph.get_text().lower():
-                    result = f"Title: {title}\nContent: {paragraph.get_text().strip()}"
+            # Search for the query in ALL text content, not just paragraphs
+            page_text = soup.get_text().lower()
+            query_lower = query.lower()
+            
+            if query_lower in page_text:
+                # Find the specific section containing the query
+                # Look for headings, paragraphs, divs, and other elements
+                relevant_elements = []
+                
+                # Search in headings (h1, h2, h3, h4, h5, h6)
+                for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    if query_lower in heading.get_text().lower():
+                        # Get the heading and its following content
+                        heading_text = heading.get_text().strip()
+                        next_sibling = heading.find_next_sibling()
+                        if next_sibling:
+                            sibling_text = next_sibling.get_text().strip()
+                            relevant_elements.append(f"{heading_text}: {sibling_text}")
+                        else:
+                            relevant_elements.append(heading_text)
+                
+                # Search in paragraphs
+                for paragraph in soup.find_all('p'):
+                    if query_lower in paragraph.get_text().lower():
+                        relevant_elements.append(paragraph.get_text().strip())
+                
+                # Search in divs and other containers
+                for div in soup.find_all('div'):
+                    if query_lower in div.get_text().lower():
+                        div_text = div.get_text().strip()
+                        if len(div_text) > 20:  # Only include substantial content
+                            relevant_elements.append(div_text)
+                
+                if relevant_elements:
+                    # Combine relevant information
+                    content = "\n\n".join(relevant_elements[:3])  # Top 3 relevant sections
+                    result = f"Title: {title}\nContent: {content}"
                     website_cache[cache_key] = (result, current_time)
                     return result
         
@@ -807,14 +839,19 @@ def search_person_on_casto_website(person_name):
         person_results = []
         
         # Search on Casto About Us page FIRST (highest priority - contains executive team)
-        casto_about_data = fetch_website_data(CASTO_ABOUT_US, person_name)
-        if casto_about_data and "No relevant information found" not in casto_about_data:
-            person_results.append({
-                'source': 'Casto About Us Page',
-                'data': casto_about_data,
-                'found': True,
-                'priority': 1  # Highest priority
-            })
+        casto_about_data = search_person_about_us_specific(person_name)
+        if casto_about_data:
+            person_results.append(casto_about_data)
+        else:
+            # Fallback to general website search
+            fallback_data = fetch_website_data(CASTO_ABOUT_US, person_name)
+            if fallback_data and "No relevant information found" not in fallback_data:
+                person_results.append({
+                    'source': 'Casto About Us Page',
+                    'data': fallback_data,
+                    'found': True,
+                    'priority': 1  # Highest priority
+                })
         
         # Search on main Casto website SECOND
         casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
@@ -844,7 +881,7 @@ def search_person_on_casto_website(person_name):
                     'source': 'Web Search',
                     'data': web_search_results,
                     'found': True,
-                    'priority': 3  # Lowest priority
+                    'priority': 4  # Lowest priority
                 })
         
         # Sort by priority (Casto websites first)
@@ -855,6 +892,57 @@ def search_person_on_casto_website(person_name):
     except Exception as e:
         logging.error(f"Error searching for person {person_name}: {e}")
         return []
+
+def search_person_about_us_specific(person_name):
+    """Specialized search for people specifically on the About Us page."""
+    try:
+        response = session.get(CASTO_ABOUT_US, timeout=15)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Look for the person's name in the page
+            page_text = soup.get_text()
+            if person_name.lower() in page_text.lower():
+                # Find the specific section with the person's information
+                # Look for headings that might contain the person's name
+                for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    heading_text = heading.get_text().strip()
+                    if person_name.lower() in heading_text.lower():
+                        # Get the heading and its following content
+                        person_info = [heading_text]
+                        
+                        # Get the next few elements for context
+                        current = heading
+                        for _ in range(3):  # Get up to 3 following elements
+                            current = current.find_next_sibling()
+                            if current and current.name:
+                                element_text = current.get_text().strip()
+                                if element_text and len(element_text) > 10:
+                                    person_info.append(element_text)
+                        
+                        if len(person_info) > 1:
+                            return {
+                                'source': 'Casto About Us Page',
+                                'data': '\n\n'.join(person_info),
+                                'found': True,
+                                'priority': 1
+                            }
+                
+                # If no specific heading found, look for paragraphs containing the name
+                for paragraph in soup.find_all('p'):
+                    if person_name.lower() in paragraph.get_text().lower():
+                        return {
+                            'source': 'Casto About Us Page',
+                            'data': paragraph.get_text().strip(),
+                            'found': True,
+                            'priority': 1
+                        }
+        
+        return None
+        
+    except Exception as e:
+        logging.error(f"Error in specialized About Us search for {person_name}: {e}")
+        return None
 
 def extract_person_name_from_query(user_input):
     """Extract person name from user query."""
@@ -1189,10 +1277,10 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
             logging.info("Creating direct Casto Travel response from knowledge base.")
             
-                    # Create a direct response using knowledge base
-        direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
-        if direct_response:
-            # Add enhanced information if available
+            # Create a direct response using knowledge base
+            direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
+            if direct_response:
+                # Add enhanced information if available
             if enhanced_info:
                 enhanced_text = "\n\n📚 **Additional Sources & Information:**\n"
                 for info in enhanced_info[:3]:  # Show top 3 sources
@@ -1203,6 +1291,32 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
             # Manage conversation context
             manage_conversation_context(user_id, user_input, direct_response)
             return jsonify({"response": direct_response})
+        
+        # For person search questions, create a direct response from Casto websites
+        if intent_analysis.get('intent') == 'person_search':
+            logging.info("Creating direct person search response from Casto websites.")
+            
+            person_name = extract_person_name_from_query(user_input)
+            if person_name:
+                person_results = search_person_on_casto_website(person_name)
+                if person_results:
+                    casto_results = [r for r in person_results if r['source'].startswith('Casto')]
+                    if casto_results:
+                        # Found on Casto website - create direct response
+                        top_result = casto_results[0]  # Highest priority result
+                        direct_response = f"""As CASI, I found information about {person_name} on the Casto Travel Philippines website:
+
+**Source**: {top_result['source']}
+**Information**: {top_result['data']}
+
+This information comes directly from the official Casto Travel Philippines website and is authoritative."""
+                        
+                        # Make links clickable
+                        direct_response = make_links_clickable(direct_response)
+                        
+                        # Manage conversation context
+                        manage_conversation_context(user_id, user_input, direct_response)
+                        return jsonify({"response": direct_response})
         
         # If not a Casto question or no direct response, use AI model
         logging.info("Fetching response from the chatbot.")
