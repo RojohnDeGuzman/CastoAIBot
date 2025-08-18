@@ -74,35 +74,61 @@ def fetch_website_data(url, query=None):
     """Fetch and parse data from a website with caching."""
     cache_key = f"{url}:{query}"
     current_time = time.time()
-    
+
     # Check cache first
     if cache_key in website_cache:
         cached_data, timestamp = website_cache[cache_key]
         if current_time - timestamp < CACHE_DURATION:
             return cached_data
-    
+
     try:
         response = session.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         # Extract the title
         title = soup.title.string if soup.title else "No title found"
-        
-        # Search for the query in all paragraphs
-        paragraphs = soup.find_all('p')
+
         if query:
-            for paragraph in paragraphs:
-                if query.lower() in paragraph.get_text().lower():
-                    result = f"Title: {title}\nContent: {paragraph.get_text().strip()}"
+            # Search across all text, not just <p>
+            page_text = soup.get_text().lower()
+            q = query.lower()
+            if q in page_text:
+                relevant = []
+
+                # Headings with following siblings
+                for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    if q in h.get_text().lower():
+                        heading_text = h.get_text().strip()
+                        sib = h.find_next_sibling()
+                        if sib:
+                            relevant.append(f"{heading_text}: {sib.get_text().strip()}")
+                        else:
+                            relevant.append(heading_text)
+
+                # Paragraphs
+                for p in soup.find_all('p'):
+                    pt = p.get_text().strip()
+                    if q in pt.lower():
+                        relevant.append(pt)
+
+                # Other containers
+                for div in soup.find_all('div'):
+                    dt = div.get_text().strip()
+                    if q in dt.lower() and len(dt) > 20:
+                        relevant.append(dt)
+
+                if relevant:
+                    content = "\n\n".join(relevant[:3])
+                    result = f"Title: {title}\nContent: {content}"
                     website_cache[cache_key] = (result, current_time)
                     return result
-        
-        # If no relevant content is found, return a default message
+
+        # Default when not found
         result = f"Title: {title}\nContent: No relevant information found on the website."
         website_cache[cache_key] = (result, current_time)
         return result
-        
+
     except Exception as e:
         error_msg = f"Error fetching website data: {str(e)}"
         website_cache[cache_key] = (error_msg, current_time)
@@ -780,18 +806,23 @@ def search_person_on_casto_website(person_name):
     """Search for a specific person on Casto Travel websites."""
     try:
         person_results = []
-        
-        # Search on Casto About Us page FIRST (highest priority - contains executive team)
-        casto_about_data = fetch_website_data(CASTO_ABOUT_US, person_name)
-        if casto_about_data and "No relevant information found" not in casto_about_data:
-            person_results.append({
-                'source': 'Casto About Us Page',
-                'data': casto_about_data,
-                'found': True,
-                'priority': 1  # Highest priority
-            })
-        
-        # Search on main Casto website SECOND
+
+        # Use specialized About Us extraction first
+        about_specific = search_person_about_us_specific(person_name)
+        if about_specific:
+            person_results.append(about_specific)
+        else:
+            # Fallback: generic scrape of About Us
+            casto_about_data = fetch_website_data(CASTO_ABOUT_US, person_name)
+            if casto_about_data and "No relevant information found" not in casto_about_data:
+                person_results.append({
+                    'source': 'Casto About Us Page',
+                    'data': casto_about_data,
+                    'found': True,
+                    'priority': 1
+                })
+
+        # Main site (secondary)
         casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
         if casto_main_data and "No relevant information found" not in casto_main_data:
             person_results.append({
@@ -800,8 +831,8 @@ def search_person_on_casto_website(person_name):
                 'found': True,
                 'priority': 2
             })
-        
-        # Search on Casto Travel website THIRD
+
+        # Travel site (tertiary)
         casto_travel_data = fetch_website_data(CASTO_TRAVEL_WEBSITE, person_name)
         if casto_travel_data and "No relevant information found" not in casto_travel_data:
             person_results.append({
@@ -810,26 +841,69 @@ def search_person_on_casto_website(person_name):
                 'found': True,
                 'priority': 3
             })
-        
-        # Web search LAST (lowest priority) - only if no Casto website results
-        if not any(result['source'].startswith('Casto') for result in person_results):
+
+        # Only if nothing from Casto
+        if not any(r['source'].startswith('Casto') for r in person_results):
             web_search_results = smart_web_search(person_name)
             if web_search_results:
                 person_results.append({
                     'source': 'Web Search',
                     'data': web_search_results,
                     'found': True,
-                    'priority': 3  # Lowest priority
+                    'priority': 4
                 })
-        
-        # Sort by priority (Casto websites first)
+
         person_results.sort(key=lambda x: x.get('priority', 999))
-        
         return person_results
-        
+
     except Exception as e:
         logging.error(f"Error searching for person {person_name}: {e}")
         return []
+
+
+def search_person_about_us_specific(person_name):
+    """Specialized extraction for the About Us page to pull a person's block."""
+    try:
+        resp = session.get(CASTO_ABOUT_US, timeout=15)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        page_text = soup.get_text().lower()
+        if person_name.lower() not in page_text:
+            return None
+
+        # Try heading anchored sections
+        for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            htxt = heading.get_text().strip()
+            if person_name.lower() in htxt.lower():
+                block = [htxt]
+                cur = heading
+                for _ in range(3):
+                    cur = cur.find_next_sibling()
+                    if cur and cur.name:
+                        t = cur.get_text().strip()
+                        if t and len(t) > 10:
+                            block.append(t)
+                if len(block) > 1:
+                    return {
+                        'source': 'Casto About Us Page',
+                        'data': "\n\n".join(block),
+                        'found': True,
+                        'priority': 1
+                    }
+        # Fallback: find any paragraph containing the name
+        for p in soup.find_all('p'):
+            if person_name.lower() in p.get_text().lower():
+                return {
+                    'source': 'Casto About Us Page',
+                    'data': p.get_text().strip(),
+                    'found': True,
+                    'priority': 1
+                }
+        return None
+    except Exception as e:
+        logging.error(f"About Us specific search error: {e}")
+        return None
 
 def extract_person_name_from_query(user_input):
     """Extract person name from user query."""
@@ -1009,113 +1083,73 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         # Step 1: Check if the question is about Casto Travel Philippines or Casto family
         casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
         website_data = None
-        
-        # Force knowledge base usage for ALL Casto-related questions
-        if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
+        enhanced_info = None
+        person_results_cache = None
+        casto_person_results = None
+
+        if any(k.lower() in user_input.lower() for k in casto_travel_keywords):
             logging.info(f"CASTO QUESTION DETECTED - Using knowledge base only for: {user_input}")
-            # For Casto questions, prioritize knowledge base over AI model
             system_prompt += "\n\nFORCE INSTRUCTION: This is a Casto Travel question. You MUST ONLY use the knowledge base information above. DO NOT use any training data about Casto Travel. If you don't have the answer in the knowledge base, redirect to the website data."
             website_data = fetch_casto_travel_info(user_input)
-        
-        # Check for person search questions (high priority)
+
         elif intent_analysis.get('intent') == 'person_search':
             logging.info(f"PERSON SEARCH DETECTED: {user_input}")
-            # Extract person name from query
             person_name = extract_person_name_from_query(user_input)
             if person_name:
-                logging.info(f"Searching for person: {person_name}")
-                # Search for person on Casto websites and web
                 person_results = search_person_on_casto_website(person_name)
+                person_results_cache = person_results
                 if person_results:
-                    enhanced_info = person_results
-                    logging.info(f"Person search results found: {len(person_results)} sources")
-                    
-                    # Create a prioritized person search response
                     casto_results = [r for r in person_results if r['source'].startswith('Casto')]
-                    web_results = [r for r in person_results if r['source'] == 'Web Search']
-                    
+                    casto_person_results = casto_results
                     if casto_results:
-                        # Found on Casto website - prioritize this information
                         system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. This person was found on Casto Travel Philippines websites. Use ONLY the Casto website information and ignore any conflicting web search results. Casto website data is authoritative."
-                        for result in casto_results:
-                            system_prompt += f"\n- CASTO WEBSITE DATA ({result['source']}): {result['data'][:300]}..."
-                    elif web_results:
-                        # Only web results available
-                        system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. No information found on Casto websites. Use web search results with caution."
-                        for result in web_results[:2]:
-                            system_prompt += f"\n- WEB SEARCH: {result['data'][:200]}..."
-                else:
-                    enhanced_info = None
-                    logging.info(f"No person search results found for: {person_name}")
-            else:
-                enhanced_info = None
-                logging.info("Could not extract person name from query")
-        
-        # Step 2: Check if the question is relevant to other CASTO topics
-        elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
+                        for r in casto_results:
+                            system_prompt += f"\n- CASTO WEBSITE DATA ({r['source']}): {r['data'][:300]}..."
+
+        elif any(k.lower() in user_input.lower() for k in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
-            website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
+            website_data = fetch_website_data(CASTO_WEBSITE, query=user_input)
 
-        # Step 3: Get a response from the chatbot using Groq (your original working setup)
+        # Direct return for Casto person search (authoritative)
+        if intent_analysis.get('intent') == 'person_search' and casto_person_results:
+            person_name = extract_person_name_from_query(user_input) or "the person"
+            top = casto_person_results[0]
+            direct_response = f"""As CASI, I found information about {person_name} on the Casto Travel Philippines website.
+
+Source: {top['source']}
+Details: {top['data']}
+
+This information is taken directly from the official Casto website."""
+            direct_response = make_links_clickable(direct_response)
+            manage_conversation_context(user_id, user_input, direct_response)
+            return jsonify({"response": direct_response})
+
+        # Fallback to model
+        import openai
         try:
-            # For Casto Travel questions, create a direct response from knowledge base
-            if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
-                logging.info("Creating direct Casto Travel response from knowledge base.")
-                
-                # Create a direct response using knowledge base
-                direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
-                if direct_response:
-                    # Manage conversation context
-                    manage_conversation_context(user_id, user_input, direct_response)
-                    return jsonify({"response": direct_response})
-            
-            # If not a Casto question or no direct response, use AI model
-            # Import OpenAI client in isolation to avoid any conflicts
-            import openai
-            
-            # Setup OpenAI-style client for Groq with isolated initialization
-            try:
-                # Create client with minimal parameters for version 1.66.3
-                client = openai.OpenAI(
-                    api_key=GROQ_API_KEY,
-                    base_url="https://api.groq.com/openai/v1"
-                )
-                
-            except Exception as e:
-                logging.error(f"Failed to create OpenAI client: {e}")
-                return jsonify({"error": f"Client initialization failed: {str(e)}"}), 500
-            
-            logging.info("Fetching response from Groq.")
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",  # Upgraded to more powerful 70B model
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                temperature=0.7
-            )
-
-            chatbot_message = response.choices[0].message.content
-            logging.info("Answer fetched from Groq.")
-
-            # Combine the chatbot's response with the website's response
-            combined_response = chatbot_message
-            if website_data and "No relevant information found" not in website_data:
-                combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
-
-            # Make all links clickable in the combined response
-            combined_response = make_links_clickable(combined_response)
-
-            # Manage conversation context
-            manage_conversation_context(user_id, user_input, combined_response)
-            
-            return jsonify({"response": combined_response})
-        
+            client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
         except Exception as e:
-            # If an error occurs, return an error message
-            logging.error(f"Error during Groq response: {str(e)}")
-            return jsonify({"error": str(e)}), 500
-    
+            logging.error(f"Failed to create OpenAI client: {e}")
+            return jsonify({"error": f"Client initialization failed: {str(e)}"}), 500
+
+        logging.info("Fetching response from Groq.")
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ],
+            temperature=0.7
+        )
+        chatbot_message = response.choices[0].message.content
+
+        combined_response = chatbot_message
+        if website_data and "No relevant information found" not in website_data:
+            combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
+        combined_response = make_links_clickable(combined_response)
+        manage_conversation_context(user_id, user_input, combined_response)
+        return jsonify({"response": combined_response})
+
     except Exception as e:
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
