@@ -30,8 +30,10 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Define the website source
+# Define the website sources
 WEBSITE_SOURCE = "https://www.travelpress.com/"
+CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
+CASTO_WEBSITE = "https://www.casto.com.ph/"
 
 # Cache for website data (in-memory for serverless)
 website_cache = {}
@@ -87,6 +89,101 @@ def fetch_website_data(url, query=None):
         error_msg = f"Error fetching website data: {str(e)}"
         website_cache[cache_key] = (error_msg, current_time)
         return error_msg
+
+def fetch_casto_travel_info(query=None):
+    """Fetch specific information about Casto Travel Philippines."""
+    cache_key = f"casto_travel:{query}"
+    current_time = time.time()
+    
+    # Check cache first
+    if cache_key in website_cache:
+        cached_data, timestamp = website_cache[cache_key]
+        if current_time - timestamp < CACHE_DURATION:
+            return cached_data
+    
+    try:
+        # Try Casto Travel Philippines website first
+        response = session.get(CASTO_TRAVEL_WEBSITE, timeout=10)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = soup.title.string if soup.title else "Casto Travel Philippines"
+            
+            # Extract key information
+            info_sections = []
+            
+            # Look for main content areas
+            main_content = soup.find('main') or soup.find('div', class_='content') or soup.find('div', class_='main')
+            if main_content:
+                # Get headings and paragraphs
+                headings = main_content.find_all(['h1', 'h2', 'h3'])
+                paragraphs = main_content.find_all('p')
+                
+                for heading in headings[:5]:  # Limit to first 5 headings
+                    heading_text = heading.get_text().strip()
+                    if heading_text:
+                        info_sections.append(f"## {heading_text}")
+                
+                for paragraph in paragraphs[:10]:  # Limit to first 10 paragraphs
+                    para_text = paragraph.get_text().strip()
+                    if para_text and len(para_text) > 20:  # Only meaningful paragraphs
+                        info_sections.append(para_text)
+            
+            if info_sections:
+                result = f"Title: {title}\n\nCasto Travel Philippines Information:\n\n" + "\n\n".join(info_sections)
+            else:
+                result = f"Title: {title}\n\nCasto Travel Philippines - Your trusted travel partner in the Philippines."
+            
+            website_cache[cache_key] = (result, current_time)
+            return result
+            
+    except Exception as e:
+        logging.warning(f"Could not fetch from Casto Travel website: {str(e)}")
+    
+    # Fallback to Casto main website
+    try:
+        response = session.get(CASTO_WEBSITE, timeout=10)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = soup.title.string if soup.title else "Casto Group"
+            
+            # Look for travel-related content
+            travel_content = []
+            paragraphs = soup.find_all('p')
+            
+            for paragraph in paragraphs[:15]:
+                para_text = paragraph.get_text().strip()
+                if any(keyword in para_text.lower() for keyword in ['travel', 'tourism', 'philippines', 'casto']):
+                    if len(para_text) > 20:
+                        travel_content.append(para_text)
+            
+            if travel_content:
+                result = f"Title: {title}\n\nCasto Travel Information:\n\n" + "\n\n".join(travel_content[:5])
+            else:
+                result = f"Title: {title}\n\nCasto Group - Providing travel and tourism services in the Philippines."
+            
+            website_cache[cache_key] = (result, current_time)
+            return result
+            
+    except Exception as e:
+        logging.error(f"Error fetching Casto information: {str(e)}")
+    
+    # Return default information if all else fails
+    default_info = """Casto Travel Philippines
+
+Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+
+Services typically include:
+• Domestic and international travel packages
+• Hotel bookings and reservations
+• Tour packages and excursions
+• Travel insurance and documentation
+• Corporate travel management
+• Group travel arrangements
+
+For the most current information, please visit their official website at https://www.casto.com.ph/ or contact them directly."""
+    
+    website_cache[cache_key] = (default_info, current_time)
+    return default_info
 
 def get_user_email_from_token(access_token):
     try:
@@ -189,10 +286,15 @@ def chat():
         if knowledge_context:
             system_prompt += "\nHere is some important knowledge you must always use:\n" + knowledge_context
 
-        # Step 1: Check if the question is relevant to the website
-        website_keywords = ["CASTO", "mission", "vision", "services", "CEO", "about"]
+        # Step 1: Check if the question is about Casto Travel Philippines
+        casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency"]
         website_data = None
-        if any(keyword.lower() in user_input.lower() for keyword in website_keywords):
+        
+        if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
+            logging.info(f"Fetching Casto Travel Philippines information for user query: {user_input}")
+            website_data = fetch_casto_travel_info(user_input)
+        # Step 2: Check if the question is relevant to other CASTO topics
+        elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
             website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
 
