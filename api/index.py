@@ -36,6 +36,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 WEBSITE_SOURCE = "https://www.travelpress.com/"
 CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
 CASTO_WEBSITE = "https://www.casto.com.ph/"
+CASTO_ABOUT_US = "https://www.casto.com.ph/about-us"
 
 # Additional Casto-related sources for enhanced learning
 CASTO_SOURCES = [
@@ -780,24 +781,34 @@ def search_person_on_casto_website(person_name):
     try:
         person_results = []
         
-        # Search on main Casto website FIRST (highest priority)
+        # Search on Casto About Us page FIRST (highest priority - contains executive team)
+        casto_about_data = fetch_website_data(CASTO_ABOUT_US, person_name)
+        if casto_about_data and "No relevant information found" not in casto_about_data:
+            person_results.append({
+                'source': 'Casto About Us Page',
+                'data': casto_about_data,
+                'found': True,
+                'priority': 1  # Highest priority
+            })
+        
+        # Search on main Casto website SECOND
         casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
         if casto_main_data and "No relevant information found" not in casto_main_data:
             person_results.append({
                 'source': 'Casto Main Website',
                 'data': casto_main_data,
                 'found': True,
-                'priority': 1  # Highest priority
+                'priority': 2
             })
         
-        # Search on Casto Travel website SECOND
+        # Search on Casto Travel website THIRD
         casto_travel_data = fetch_website_data(CASTO_TRAVEL_WEBSITE, person_name)
         if casto_travel_data and "No relevant information found" not in casto_travel_data:
             person_results.append({
                 'source': 'Casto Travel Website',
                 'data': casto_travel_data,
                 'found': True,
-                'priority': 2
+                'priority': 3
             })
         
         # Web search LAST (lowest priority) - only if no Casto website results

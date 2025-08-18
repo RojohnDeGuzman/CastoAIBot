@@ -41,6 +41,7 @@ client = OpenAI(
 WEBSITE_SOURCE = "https://www.travelpress.com/"
 CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
 CASTO_WEBSITE = "https://www.casto.com.ph/"
+CASTO_ABOUT_US = "https://www.casto.com.ph/about-us"
 
 # Additional Casto-related sources for enhanced learning
 CASTO_SOURCES = [
@@ -172,7 +173,34 @@ def fetch_casto_travel_info(query=None):
             return cached_data
     
     try:
-        # Fetch from Casto main website
+        # Fetch from Casto About Us page FIRST (highest priority - contains executive team)
+        about_response = session.get(CASTO_ABOUT_US, timeout=15)
+        about_us_info = []
+        if about_response.status_code == 200:
+            about_soup = BeautifulSoup(about_response.text, 'html.parser')
+            about_title = about_soup.title.string if about_soup.title else "Casto About Us"
+            
+            # Extract executive team information
+            executive_section = about_soup.find(string=lambda text: 'Our Executive Team' in str(text))
+            if executive_section:
+                exec_parent = executive_section.parent
+                if exec_parent:
+                    exec_text = exec_parent.get_text().strip()
+                    about_us_info.append("## Executive Team")
+                    about_us_info.append(exec_text)
+                    about_us_info.append("")
+            
+            # Extract company values
+            values_section = about_soup.find(string=lambda text: 'Our Values' in str(text))
+            if values_section:
+                values_parent = values_section.parent
+                if values_parent:
+                    values_text = values_parent.get_text().strip()
+                    about_us_info.append("## Company Values")
+                    about_us_info.append(values_text)
+                    about_us_info.append("")
+        
+        # Fetch from Casto main website SECOND
         response = session.get(CASTO_WEBSITE, timeout=15)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -299,9 +327,18 @@ def fetch_casto_travel_info(query=None):
             comprehensive_info.append("Website: https://www.casto.com.ph/")
             comprehensive_info.append("")
             
-            # Combine all information
+            # Combine all information (About Us page first, then main website)
+            combined_info = []
+            
+            # Add About Us information first (highest priority)
+            if about_us_info:
+                combined_info.extend(about_us_info)
+                combined_info.append("---")
+                combined_info.append("")
+            
+            # Add main website information
             if len(comprehensive_info) > 2:  # More than just title
-                result = "\n".join(comprehensive_info)
+                combined_info.extend(comprehensive_info)
             else:
                 # Fallback to basic extraction
                 paragraphs = soup.find_all('p')
@@ -312,9 +349,17 @@ def fetch_casto_travel_info(query=None):
                         basic_info.append(para_text)
                 
                 if basic_info:
-                    result = f"Title: {title}\n\nCasto Travel Philippines Information:\n\n" + "\n\n".join(basic_info[:10])
+                    combined_info.append(f"Title: {title}")
+                    combined_info.append("")
+                    combined_info.append("Casto Travel Philippines Information:")
+                    combined_info.append("")
+                    combined_info.extend(basic_info[:10])
                 else:
-                    result = f"Title: {title}\n\nCasto Travel Philippines - Comprehensive travel services and support."
+                    combined_info.append(f"Title: {title}")
+                    combined_info.append("")
+                    combined_info.append("Casto Travel Philippines - Comprehensive travel services and support.")
+            
+            result = "\n".join(combined_info)
             
             website_cache[cache_key] = (result, current_time)
             return result
@@ -761,24 +806,34 @@ def search_person_on_casto_website(person_name):
     try:
         person_results = []
         
-        # Search on main Casto website FIRST (highest priority)
+        # Search on Casto About Us page FIRST (highest priority - contains executive team)
+        casto_about_data = fetch_website_data(CASTO_ABOUT_US, person_name)
+        if casto_about_data and "No relevant information found" not in casto_about_data:
+            person_results.append({
+                'source': 'Casto About Us Page',
+                'data': casto_about_data,
+                'found': True,
+                'priority': 1  # Highest priority
+            })
+        
+        # Search on main Casto website SECOND
         casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
         if casto_main_data and "No relevant information found" not in casto_main_data:
             person_results.append({
                 'source': 'Casto Main Website',
                 'data': casto_main_data,
                 'found': True,
-                'priority': 1  # Highest priority
+                'priority': 2
             })
         
-        # Search on Casto Travel website SECOND
+        # Search on Casto Travel website THIRD
         casto_travel_data = fetch_website_data(CASTO_TRAVEL_WEBSITE, person_name)
         if casto_travel_data and "No relevant information found" not in casto_travel_data:
             person_results.append({
                 'source': 'Casto Travel Website',
                 'data': casto_travel_data,
                 'found': True,
-                'priority': 2
+                'priority': 3
             })
         
         # Web search LAST (lowest priority) - only if no Casto website results
