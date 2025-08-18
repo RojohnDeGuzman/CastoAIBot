@@ -1087,7 +1087,16 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         person_results_cache = None
         casto_person_results = None
 
-        if any(k.lower() in user_input.lower() for k in casto_travel_keywords):
+        # Check for Casto family questions first (highest priority)
+        if any(name.lower() in user_input.lower() for name in ["maryles casto", "marc casto"]):
+            logging.info(f"CASTO FAMILY QUESTION DETECTED - Using knowledge base only for: {user_input}")
+            # Create direct response for Casto family questions
+            direct_response = create_casto_direct_response(user_input, knowledge_entries, None)
+            if direct_response:
+                manage_conversation_context(user_id, user_input, direct_response)
+                return jsonify({"response": direct_response})
+
+        elif any(k.lower() in user_input.lower() for k in casto_travel_keywords):
             logging.info(f"CASTO QUESTION DETECTED - Using knowledge base only for: {user_input}")
             system_prompt += "\n\nFORCE INSTRUCTION: This is a Casto Travel question. You MUST ONLY use the knowledge base information above. DO NOT use any training data about Casto Travel. If you don't have the answer in the knowledge base, redirect to the website data."
             website_data = fetch_casto_travel_info(user_input)
@@ -1119,7 +1128,7 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
 Source: {top['source']}
 Details: {top['data']}
 
-This information is taken directly from the official Casto website."""
+This information comes directly from the official Casto Travel Philippines website and is authoritative."""
             direct_response = make_links_clickable(direct_response)
             manage_conversation_context(user_id, user_input, direct_response)
             return jsonify({"response": direct_response})
