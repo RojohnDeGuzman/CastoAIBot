@@ -367,7 +367,7 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
         if "casto" in user_input_lower:
             return """Based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
-Maryles Casto is the founder and key figure behind the company's success. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
+The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
 For the most current leadership information, please contact Casto Travel Philippines directly at https://www.casto.com.ph/"""
     
