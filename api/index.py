@@ -457,11 +457,42 @@ def understand_user_intent(user_input, conversation_context):
         "casto travel", "casto philippines", "casto group", "casto travel philippines"
     ]
     
+    # Check for general knowledge questions SECOND (high priority)
+    general_question_keywords = [
+        "what is", "who is", "when is", "where is", "why is", "how is",
+        "what are", "who are", "when are", "where are", "why are", "how are",
+        "what does", "who does", "when does", "where does", "why does", "how does",
+        "explain", "tell me about", "describe", "define", "what do you know about"
+    ]
+    
+    # Check for travel/tourism questions THIRD (medium priority)
+    travel_keywords = [
+        "travel", "tourism", "vacation", "holiday", "trip", "booking", "hotel",
+        "flight", "airline", "destination", "tour", "package", "philippines",
+        "manila", "cebu", "boracay", "palawan", "visa", "passport"
+    ]
+    
     # If it's a Casto question, override other intent detection
     if any(keyword in user_input_lower for keyword in casto_keywords):
         return {
             'intent': 'casto_question',
             'context_clues': ['casto_focus'],
+            'is_follow_up': False
+        }
+    
+    # If it's a general knowledge question, give it high priority
+    if any(keyword in user_input_lower for keyword in general_question_keywords):
+        return {
+            'intent': 'general_question',
+            'context_clues': ['knowledge_seeking'],
+            'is_follow_up': False
+        }
+    
+    # If it's a travel/tourism question, give it medium priority
+    if any(keyword in user_input_lower for keyword in travel_keywords):
+        return {
+            'intent': 'travel_question',
+            'context_clues': ['travel_focus'],
             'is_follow_up': False
         }
     
@@ -510,6 +541,16 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
     # Handle Casto questions FIRST (highest priority)
     if intent_analysis['intent'] == 'casto_question':
         # Let the main logic handle Casto questions with knowledge base
+        return None
+    
+    # Handle general knowledge questions SECOND (high priority)
+    if intent_analysis['intent'] == 'general_question':
+        # Let the main logic handle general questions with web search
+        return None
+    
+    # Handle travel/tourism questions THIRD (medium priority)
+    if intent_analysis['intent'] == 'travel_question':
+        # Let the main logic handle travel questions with enhanced search
         return None
     
     # Handle greetings
@@ -1047,6 +1088,39 @@ def general_web_search():
         logging.error(f"General web search error: {e}")
         return jsonify({"error": "General search service temporarily unavailable"}), 500
 
+@app.route("/search/knowledge", methods=["POST"])
+@limiter.limit("30 per minute")
+def knowledge_web_search():
+    """Perform knowledge-focused web search for general questions."""
+    try:
+        data = request.json
+        query = data.get("query", "") if data else ""
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+        
+        # Use smart search for knowledge questions
+        search_results = smart_web_search(query)
+        
+        if search_results:
+            return jsonify({
+                "success": True,
+                "results": search_results,
+                "query": query,
+                "search_type": "Knowledge",
+                "message": "Knowledge search completed with smart detection"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "No knowledge search results found",
+                "query": query
+            })
+    
+    except Exception as e:
+        logging.error(f"Knowledge web search error: {e}")
+        return jsonify({"error": "Knowledge search service temporarily unavailable"}), 500
+
 @app.route("/", methods=["GET"])
 def health_check():
     """Health check endpoint"""
@@ -1075,6 +1149,7 @@ def health_check():
             "conversation_clear": "/conversation/clear",
             "search": "/search",
             "search_general": "/search/general",
+            "search_knowledge": "/search/knowledge",
             "sources": "/sources",
             "health": "/"
         },

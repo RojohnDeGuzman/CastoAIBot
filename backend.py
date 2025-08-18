@@ -427,11 +427,42 @@ def understand_user_intent(user_input, conversation_context):
         "casto travel", "casto philippines", "casto group", "casto travel philippines"
     ]
     
+    # Check for general knowledge questions SECOND (high priority)
+    general_question_keywords = [
+        "what is", "who is", "when is", "where is", "why is", "how is",
+        "what are", "who are", "when are", "where are", "why are", "how are",
+        "what does", "who does", "when does", "where does", "why does", "how does",
+        "explain", "tell me about", "describe", "define", "what do you know about"
+    ]
+    
+    # Check for travel/tourism questions THIRD (medium priority)
+    travel_keywords = [
+        "travel", "tourism", "vacation", "holiday", "trip", "booking", "hotel",
+        "flight", "airline", "destination", "tour", "package", "philippines",
+        "manila", "cebu", "boracay", "palawan", "visa", "passport"
+    ]
+    
     # If it's a Casto question, override other intent detection
     if any(keyword in user_input_lower for keyword in casto_keywords):
         return {
             'intent': 'casto_question',
             'context_clues': ['casto_focus'],
+            'is_follow_up': False
+        }
+    
+    # If it's a general knowledge question, give it high priority
+    if any(keyword in user_input_lower for keyword in general_question_keywords):
+        return {
+            'intent': 'general_question',
+            'context_clues': ['knowledge_seeking'],
+            'is_follow_up': False
+        }
+    
+    # If it's a travel/tourism question, give it medium priority
+    if any(keyword in user_input_lower for keyword in travel_keywords):
+        return {
+            'intent': 'travel_question',
+            'context_clues': ['travel_focus'],
             'is_follow_up': False
         }
     
@@ -480,6 +511,16 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
     # Handle Casto questions FIRST (highest priority)
     if intent_analysis['intent'] == 'casto_question':
         # Let the main logic handle Casto questions with knowledge base
+        return None
+    
+    # Handle general knowledge questions SECOND (high priority)
+    if intent_analysis['intent'] == 'general_question':
+        # Let the main logic handle general questions with web search
+        return None
+    
+    # Handle travel/tourism questions THIRD (medium priority)
+    if intent_analysis['intent'] == 'travel_question':
+        # Let the main logic handle travel questions with enhanced search
         return None
     
     # Handle greetings
@@ -902,6 +943,36 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
                 logging.info(f"Enhanced info found: {len(enhanced_info)} sources")
         except Exception as e:
             logging.error(f"Error fetching enhanced info: {e}")
+            enhanced_info = None
+    
+    # Step 2: Check if this is a general knowledge question (high priority)
+    elif intent_analysis.get('intent') == 'general_question':
+        logging.info(f"GENERAL KNOWLEDGE QUESTION DETECTED: {user_input}")
+        # For general questions, use web search to provide current information
+        try:
+            enhanced_info = smart_web_search(user_input)
+            if enhanced_info:
+                logging.info(f"Web search results found: {len(enhanced_info)} sources")
+                # Add web search context to system prompt
+                system_prompt += "\n\nWEB SEARCH CONTEXT: Use the following web search results to provide current and accurate information:"
+                for info in enhanced_info[:3]:  # Top 3 results
+                    system_prompt += f"\n- {info['title']}: {info['snippet'][:200]}..."
+        except Exception as e:
+            logging.error(f"Error fetching web search results: {e}")
+            enhanced_info = None
+    
+    # Step 3: Check if this is a travel/tourism question (medium priority)
+    elif intent_analysis.get('intent') == 'travel_question':
+        logging.info(f"TRAVEL QUESTION DETECTED: {user_input}")
+        # For travel questions, combine web search with travel-specific sources
+        try:
+            enhanced_info = smart_web_search(user_input)
+            if enhanced_info:
+                logging.info(f"Travel search results found: {len(enhanced_info)} sources")
+                # Add travel-specific context
+                system_prompt += "\n\nTRAVEL CONTEXT: This is a travel-related question. Provide practical travel advice and current information from reliable sources."
+        except Exception as e:
+            logging.error(f"Error fetching travel search results: {e}")
             enhanced_info = None
     # Step 2: Check if the question is relevant to other CASTO topics
     elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
