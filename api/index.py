@@ -1279,8 +1279,17 @@ This information comes directly from the official Casto Travel Philippines websi
         casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
         if any(name.lower() in user_input.lower() for name in casto_personnel_names):
             logging.info(f"FINAL SAFETY CHECK: Blocking Casto personnel question from AI model: {user_input}")
-            # Return a default response instead of calling the AI model
-            default_response = "I need to check my knowledge base for the most current information about Casto Travel Philippines personnel. Please try asking about specific Casto Travel Philippines staff members."
+            
+            # Try one more time to get knowledge base response
+            knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+            if knowledge_response:
+                logging.info(f"FINAL CHECK: Found knowledge base entry, returning it")
+                manage_conversation_context(user_id, user_input, knowledge_response)
+                return jsonify({"response": knowledge_response})
+            
+            # If still no knowledge base response, return a clear message
+            detected_person = next((name for name in casto_personnel_names if name.lower() in user_input.lower()), "this person")
+            default_response = f"I should have information about {detected_person} in my knowledge base, but I'm unable to retrieve it. This appears to be a system issue. Please contact Casto Travel Philippines directly for information about their personnel."
             manage_conversation_context(user_id, user_input, default_response)
             return jsonify({"response": default_response})
 
