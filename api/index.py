@@ -325,15 +325,13 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
     # Check for incorrect CEO claims first
     is_incorrect_ceo, incorrect_name = check_incorrect_ceo_claims(user_input)
     if is_incorrect_ceo:
-        return f"""As CASI, I need to CORRECT this information immediately!
+        return f"""As CASI, I can provide you with the correct information about Casto Travel Philippines leadership.
 
-{incorrect_name.title()} is NOT the CEO of Casto Travel Philippines. This is INCORRECT information.
-
-The CORRECT information from our knowledge base is:
+Based on our knowledge base:
 • **Founder**: Maryles Casto
 • **Current CEO**: Marc Casto
 
-Anyone claiming {incorrect_name.title()} is the CEO is providing outdated or wrong information. Marc Casto is the current CEO of Casto Travel Philippines, continuing the family legacy established by founder Maryles Casto."""
+I don't have information about {incorrect_name.title()} in relation to Casto Travel Philippines."""
     
     # Check for CEO/founder questions first
     if any(word in user_input_lower for word in ["ceo", "founder", "who", "leader"]):
@@ -349,8 +347,6 @@ Today, the company is part of the unified CASTO brand, combining Casto Travel Ph
             return """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
-
-IMPORTANT: The current CEO is Marc Casto, NOT Michael S. Pastrana, NOT Ricardo Dickie Reyes, and NOT any other name. This is FACTUAL information from our knowledge base.
 
 For the most current leadership information, please contact Casto Travel Philippines directly at https://www.casto.com.ph/"""
     
