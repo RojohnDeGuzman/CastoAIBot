@@ -15,6 +15,8 @@ from functools import lru_cache
 from contextlib import contextmanager
 import queue, os
 import concurrent.futures
+from duckduckgo_search import DDGS
+from newspaper import Article
 
 app = Flask(__name__)
 CORS(app)
@@ -39,6 +41,16 @@ client = OpenAI(
 WEBSITE_SOURCE = "https://www.travelpress.com/"
 CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
 CASTO_WEBSITE = "https://www.casto.com.ph/"
+
+# Additional Casto-related sources for enhanced learning
+CASTO_SOURCES = [
+    "https://www.casto.com.ph/",
+    "https://www.castotravel.ph/",
+    "https://www.facebook.com/castotravelphilippines",
+    "https://www.linkedin.com/company/casto-travel-philippines",
+    "https://www.instagram.com/castotravelph/",
+    "https://www.youtube.com/@castotravelphilippines"
+]
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -502,6 +514,88 @@ Is there a specific aspect you'd like to know more about?"""
     
     return follow_up_info
 
+def web_search_casto_info(query):
+    """Perform web search for Casto Travel Philippines information."""
+    try:
+        with DDGS() as ddgs:
+            # Search for Casto Travel Philippines specific information
+            search_query = f"Casto Travel Philippines {query}"
+            results = list(ddgs.text(search_query, max_results=5))
+            
+            if not results:
+                return None
+            
+            # Process and format results
+            formatted_results = []
+            for result in results:
+                formatted_results.append({
+                    'title': result.get('title', ''),
+                    'snippet': result.get('body', ''),
+                    'url': result.get('link', ''),
+                    'source': 'Web Search'
+                })
+            
+            return formatted_results
+    except Exception as e:
+        logging.error(f"Web search error: {e}")
+        return None
+
+def fetch_enhanced_casto_info(query):
+    """Fetch enhanced information from multiple Casto sources."""
+    enhanced_info = []
+    
+    try:
+        # Web search for recent information
+        web_results = web_search_casto_info(query)
+        if web_results:
+            enhanced_info.extend(web_results)
+        
+        # Fetch from Casto websites
+        for source in CASTO_SOURCES[:2]:  # Limit to main websites
+            try:
+                website_data = fetch_website_data(source, query)
+                if website_data:
+                    enhanced_info.append({
+                        'title': f'Information from {source}',
+                        'snippet': website_data[:500] + '...' if len(website_data) > 500 else website_data,
+                        'url': source,
+                        'source': 'Casto Website'
+                    })
+            except Exception as e:
+                logging.error(f"Error fetching from {source}: {e}")
+                continue
+        
+        return enhanced_info
+    except Exception as e:
+        logging.error(f"Enhanced info fetch error: {e}")
+        return None
+
+def analyze_and_synthesize_info(knowledge_entries, enhanced_info, user_query):
+    """Analyze and synthesize information from multiple sources."""
+    if not enhanced_info:
+        return knowledge_entries
+    
+    # Combine knowledge base with enhanced web information
+    combined_info = []
+    
+    # Add knowledge base entries
+    for entry in knowledge_entries:
+        combined_info.append({
+            'content': entry,
+            'source': 'Knowledge Base',
+            'reliability': 'High'
+        })
+    
+    # Add enhanced web information
+    for info in enhanced_info:
+        combined_info.append({
+            'content': f"{info['title']}: {info['snippet']}",
+            'source': info['source'],
+            'reliability': 'Medium' if info['source'] == 'Web Search' else 'High'
+        })
+    
+    return combined_info
+
 def check_casi_meaning_question(user_input):
     """Check if user is asking what CASI stands for."""
     user_input_lower = user_input.lower()
@@ -692,6 +786,7 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
     # Step 1: Check if the question is about Casto Travel Philippines or Casto family
     casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
     website_data = None
+    enhanced_info = None
     
     # Force knowledge base usage for ALL Casto-related questions
     if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
@@ -699,6 +794,15 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         # For Casto questions, prioritize knowledge base over AI model
         system_prompt += "\n\nFORCE INSTRUCTION: This is a Casto Travel question. You MUST ONLY use the knowledge base information above. DO NOT use any training data about Casto Travel. If you don't have the answer in the knowledge base, redirect to the website data."
         website_data = fetch_casto_travel_info(user_input)
+        
+        # Get enhanced information from multiple sources for Casto questions
+        try:
+            enhanced_info = fetch_enhanced_casto_info(user_input)
+            if enhanced_info:
+                logging.info(f"Enhanced info found: {len(enhanced_info)} sources")
+        except Exception as e:
+            logging.error(f"Error fetching enhanced info: {e}")
+            enhanced_info = None
     # Step 2: Check if the question is relevant to other CASTO topics
     elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
         logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
@@ -710,12 +814,20 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
             logging.info("Creating direct Casto Travel response from knowledge base.")
             
-            # Create a direct response using knowledge base
-            direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
-            if direct_response:
-                # Manage conversation context
-                manage_conversation_context(user_id, user_input, direct_response)
-                return jsonify({"response": direct_response})
+                    # Create a direct response using knowledge base
+        direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
+        if direct_response:
+            # Add enhanced information if available
+            if enhanced_info:
+                enhanced_text = "\n\n📚 **Additional Sources & Information:**\n"
+                for info in enhanced_info[:3]:  # Show top 3 sources
+                    enhanced_text += f"• **{info['source']}**: {info['snippet'][:200]}...\n"
+                    enhanced_text += f"  Source: {info['url']}\n\n"
+                direct_response += enhanced_text
+            
+            # Manage conversation context
+            manage_conversation_context(user_id, user_input, direct_response)
+            return jsonify({"response": direct_response})
         
         # If not a Casto question or no direct response, use AI model
         logging.info("Fetching response from the chatbot.")
@@ -783,6 +895,54 @@ def clear_conversation_context():
         return jsonify({"message": "Conversation context cleared successfully"})
     else:
         return jsonify({"message": "No conversation context to clear"})
+
+@app.route("/search", methods=["POST"])
+@limiter.limit("30 per minute")
+def web_search():
+    """Perform web search for Casto Travel Philippines information."""
+    access_token = request.json.get("access_token")
+    email = get_user_email_from_token(access_token)
+    if not email or not is_castotravel_user(email):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    query = request.json.get("query", "")
+    if not query:
+        return jsonify({"error": "No query provided"}), 400
+    
+    try:
+        # Perform web search
+        search_results = web_search_casto_info(query)
+        
+        if search_results:
+            return jsonify({
+                "success": True,
+                "results": search_results,
+                "query": query
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "No search results found",
+                "query": query
+            })
+    
+    except Exception as e:
+        logging.error(f"Web search error: {e}")
+        return jsonify({"error": "Search service temporarily unavailable"}), 500
+
+@app.route("/sources", methods=["GET"])
+@limiter.limit("30 per minute")
+def get_available_sources():
+    """Get list of available information sources."""
+    access_token = request.args.get("access_token")
+    email = get_user_email_from_token(access_token)
+    if not email or not is_castotravel_user(email):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    return jsonify({
+        "sources": CASTO_SOURCES,
+        "description": "Available information sources for Casto Travel Philippines"
+    })
 
 # Cleanup function for graceful shutdown
 def cleanup():

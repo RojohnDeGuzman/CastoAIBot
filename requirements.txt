@@ -10,3 +10,6 @@ waitress==2.1.2
 beautifulsoup4==4.12.2
 flask-limiter==3.5.0
 pyinstaller==6.1.0
+duckduckgo-search==4.1.1
+lxml==4.9.3
+newspaper3k==0.2.8

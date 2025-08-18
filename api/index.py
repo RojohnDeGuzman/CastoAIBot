@@ -9,6 +9,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import time
 from functools import lru_cache
+from duckduckgo_search import DDGS
+from newspaper import Article
 
 # NOTE: Authentication has been temporarily disabled for testing purposes.
 # Authentication will be re-enabled once the Microsoft Graph API integration is working properly.
@@ -34,6 +36,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 WEBSITE_SOURCE = "https://www.travelpress.com/"
 CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
 CASTO_WEBSITE = "https://www.casto.com.ph/"
+
+# Additional Casto-related sources for enhanced learning
+CASTO_SOURCES = [
+    "https://www.casto.com.ph/",
+    "https://www.castotravel.ph/",
+    "https://www.facebook.com/castotravelphilippines",
+    "https://www.linkedin.com/company/casto-travel-philippines",
+    "https://www.instagram.com/castotravelph/",
+    "https://www.youtube.com/@castotravelphilippines"
+]
 
 # Cache for website data (in-memory for serverless)
 website_cache = {}
@@ -517,6 +529,88 @@ Is there a specific aspect you'd like to know more about?"""
     
     return follow_up_info
 
+def web_search_casto_info(query):
+    """Perform web search for Casto Travel Philippines information."""
+    try:
+        with DDGS() as ddgs:
+            # Search for Casto Travel Philippines specific information
+            search_query = f"Casto Travel Philippines {query}"
+            results = list(ddgs.text(search_query, max_results=5))
+            
+            if not results:
+                return None
+            
+            # Process and format results
+            formatted_results = []
+            for result in results:
+                formatted_results.append({
+                    'title': result.get('title', ''),
+                    'snippet': result.get('body', ''),
+                    'url': result.get('link', ''),
+                    'source': 'Web Search'
+                })
+            
+            return formatted_results
+    except Exception as e:
+        logging.error(f"Web search error: {e}")
+        return None
+
+def fetch_enhanced_casto_info(query):
+    """Fetch enhanced information from multiple Casto sources."""
+    enhanced_info = []
+    
+    try:
+        # Web search for recent information
+        web_results = web_search_casto_info(query)
+        if web_results:
+            enhanced_info.extend(web_results)
+        
+        # Fetch from Casto websites
+        for source in CASTO_SOURCES[:2]:  # Limit to main websites
+            try:
+                website_data = fetch_website_data(source, query)
+                if website_data:
+                    enhanced_info.append({
+                        'title': f'Information from {source}',
+                        'snippet': website_data[:500] + '...' if len(website_data) > 500 else website_data,
+                        'url': source,
+                        'source': 'Casto Website'
+                    })
+            except Exception as e:
+                logging.error(f"Error fetching from {source}: {e}")
+                continue
+        
+        return enhanced_info
+    except Exception as e:
+        logging.error(f"Enhanced info fetch error: {e}")
+        return None
+
+def analyze_and_synthesize_info(knowledge_entries, enhanced_info, user_query):
+    """Analyze and synthesize information from multiple sources."""
+    if not enhanced_info:
+        return knowledge_entries
+    
+    # Combine knowledge base with enhanced web information
+    combined_info = []
+    
+    # Add knowledge base entries
+    for entry in knowledge_entries:
+        combined_info.append({
+            'content': entry,
+            'source': 'Knowledge Base',
+            'reliability': 'High'
+        })
+    
+    # Add enhanced web information
+    for info in enhanced_info:
+        combined_info.append({
+            'content': f"{info['title']}: {info['snippet']}",
+            'source': info['source'],
+            'reliability': 'Medium' if info['source'] == 'Web Search' else 'High'
+        })
+    
+    return combined_info
+
 def check_casi_meaning_question(user_input):
     """Check if user is asking what CASI stands for."""
     user_input_lower = user_input.lower()
@@ -781,6 +875,46 @@ def clear_conversation_context():
     else:
         return jsonify({"message": "No conversation context to clear"})
 
+@app.route("/search", methods=["POST"])
+@limiter.limit("30 per minute")
+def web_search():
+    """Perform web search for Casto Travel Philippines information."""
+    try:
+        data = request.json
+        query = data.get("query", "") if data else ""
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+        
+        # Perform web search
+        search_results = web_search_casto_info(query)
+        
+        if search_results:
+            return jsonify({
+                "success": True,
+                "results": search_results,
+                "query": query
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "No search results found",
+                "query": query
+            })
+    
+    except Exception as e:
+        logging.error(f"Web search error: {e}")
+        return jsonify({"error": "Search service temporarily unavailable"}), 500
+
+@app.route("/sources", methods=["GET"])
+@limiter.limit("30 per minute")
+def get_available_sources():
+    """Get list of available information sources."""
+    return jsonify({
+        "sources": CASTO_SOURCES,
+        "description": "Available information sources for Casto Travel Philippines"
+    })
+
 @app.route("/", methods=["GET"])
 def health_check():
     """Health check endpoint"""
@@ -796,6 +930,8 @@ def health_check():
             "conversation_memory": True,
             "intent_recognition": True,
             "context_awareness": True,
+            "web_search": True,
+            "multiple_sources": True,
             "authentication": "disabled (temporary)",
             "rate_limiting": True
         },
@@ -805,6 +941,8 @@ def health_check():
             "knowledge": "/knowledge",
             "conversation_context": "/conversation/context",
             "conversation_clear": "/conversation/clear",
+            "search": "/search",
+            "sources": "/sources",
             "health": "/"
         },
         "note": "Authentication is temporarily disabled for testing. Will be re-enabled once Microsoft Graph API integration is working."
