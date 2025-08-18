@@ -782,6 +782,27 @@ def check_casi_meaning_question(user_input):
     
     return any(keyword in user_input_lower for keyword in casi_meaning_keywords)
 
+def check_knowledge_base_for_person(user_input, knowledge_entries):
+    """Check if we have knowledge base entries for specific people."""
+    user_input_lower = user_input.lower()
+    
+    # List of known Casto personnel from knowledge base
+    casto_personnel = [
+        "maryles casto", "marc casto", "elaine randrup", "alwin benedicto", 
+        "george anzures", "ma. berdandina galvez", "berdandina galvez"
+    ]
+    
+    # Check if the query is about any known Casto personnel
+    for person in casto_personnel:
+        if person in user_input_lower:
+            # Find the relevant knowledge base entry
+            for entry in knowledge_entries:
+                if person in entry.get('question', '').lower() or person in entry.get('answer', '').lower():
+                    return entry.get('answer', '')
+    
+    return None
+
+
 def check_incorrect_ceo_claims(user_input):
     """Check if user is asking about incorrect CEO information."""
     user_input_lower = user_input.lower()
@@ -1105,6 +1126,14 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
             logging.info(f"PERSON SEARCH DETECTED: {user_input}")
             person_name = extract_person_name_from_query(user_input)
             if person_name:
+                # First check if we have knowledge base entries for this person
+                knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+                if knowledge_response:
+                    logging.info(f"Found knowledge base entry for {person_name}, returning directly")
+                    manage_conversation_context(user_id, user_input, knowledge_response)
+                    return jsonify({"response": knowledge_response})
+                
+                # If no knowledge base entry, search Casto websites
                 person_results = search_person_on_casto_website(person_name)
                 person_results_cache = person_results
                 if person_results:
