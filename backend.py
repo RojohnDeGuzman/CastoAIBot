@@ -761,32 +761,39 @@ def search_person_on_casto_website(person_name):
     try:
         person_results = []
         
-        # Search on main Casto website
+        # Search on main Casto website FIRST (highest priority)
         casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
         if casto_main_data and "No relevant information found" not in casto_main_data:
             person_results.append({
                 'source': 'Casto Main Website',
                 'data': casto_main_data,
-                'found': True
+                'found': True,
+                'priority': 1  # Highest priority
             })
         
-        # Search on Casto Travel website
+        # Search on Casto Travel website SECOND
         casto_travel_data = fetch_website_data(CASTO_TRAVEL_WEBSITE, person_name)
         if casto_travel_data and "No relevant information found" not in casto_travel_data:
             person_results.append({
                 'source': 'Casto Travel Website',
                 'data': casto_travel_data,
-                'found': True
+                'found': True,
+                'priority': 2
             })
         
-        # Also perform web search for broader context
-        web_search_results = smart_web_search(person_name)
-        if web_search_results:
-            person_results.append({
-                'source': 'Web Search',
-                'data': web_search_results,
-                'found': True
-            })
+        # Web search LAST (lowest priority) - only if no Casto website results
+        if not any(result['source'].startswith('Casto') for result in person_results):
+            web_search_results = smart_web_search(person_name)
+            if web_search_results:
+                person_results.append({
+                    'source': 'Web Search',
+                    'data': web_search_results,
+                    'found': True,
+                    'priority': 3  # Lowest priority
+                })
+        
+        # Sort by priority (Casto websites first)
+        person_results.sort(key=lambda x: x.get('priority', 999))
         
         return person_results
         
@@ -1095,14 +1102,21 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
             if person_results:
                 enhanced_info = person_results
                 logging.info(f"Person search results found: {len(person_results)} sources")
-                # Add person search context to system prompt
-                system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. Use the following search results to provide information:"
-                for result in person_results[:3]:  # Top 3 results
-                    if isinstance(result['data'], list):
-                        for item in result['data'][:2]:  # Top 2 items per source
-                            system_prompt += f"\n- {result['source']}: {item.get('title', '')} - {item.get('snippet', '')[:150]}..."
-                    else:
-                        system_prompt += f"\n- {result['source']}: {result['data'][:200]}..."
+                
+                # Create a prioritized person search response
+                casto_results = [r for r in person_results if r['source'].startswith('Casto')]
+                web_results = [r for r in person_results if r['source'] == 'Web Search']
+                
+                if casto_results:
+                    # Found on Casto website - prioritize this information
+                    system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. This person was found on Casto Travel Philippines websites. Use ONLY the Casto website information and ignore any conflicting web search results. Casto website data is authoritative."
+                    for result in casto_results:
+                        system_prompt += f"\n- CASTO WEBSITE DATA ({result['source']}): {result['data'][:300]}..."
+                elif web_results:
+                    # Only web results available
+                    system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. No information found on Casto websites. Use web search results with caution."
+                    for result in web_results[:2]:
+                        system_prompt += f"\n- WEB SEARCH: {result['data'][:200]}..."
             else:
                 enhanced_info = None
                 logging.info(f"No person search results found for: {person_name}")

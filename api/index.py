@@ -780,32 +780,39 @@ def search_person_on_casto_website(person_name):
     try:
         person_results = []
         
-        # Search on main Casto website
+        # Search on main Casto website FIRST (highest priority)
         casto_main_data = fetch_website_data(CASTO_WEBSITE, person_name)
         if casto_main_data and "No relevant information found" not in casto_main_data:
             person_results.append({
                 'source': 'Casto Main Website',
                 'data': casto_main_data,
-                'found': True
+                'found': True,
+                'priority': 1  # Highest priority
             })
         
-        # Search on Casto Travel website
+        # Search on Casto Travel website SECOND
         casto_travel_data = fetch_website_data(CASTO_TRAVEL_WEBSITE, person_name)
-        if casto_travel_data and "No relevant information found" not in casto_main_data:
+        if casto_travel_data and "No relevant information found" not in casto_travel_data:
             person_results.append({
                 'source': 'Casto Travel Website',
                 'data': casto_travel_data,
-                'found': True
+                'found': True,
+                'priority': 2
             })
         
-        # Also perform web search for broader context
-        web_search_results = smart_web_search(person_name)
-        if web_search_results:
-            person_results.append({
-                'source': 'Web Search',
-                'data': web_search_results,
-                'found': True
-            })
+        # Web search LAST (lowest priority) - only if no Casto website results
+        if not any(result['source'].startswith('Casto') for result in person_results):
+            web_search_results = smart_web_search(person_name)
+            if web_search_results:
+                person_results.append({
+                    'source': 'Web Search',
+                    'data': web_search_results,
+                    'found': True,
+                    'priority': 3  # Lowest priority
+                })
+        
+        # Sort by priority (Casto websites first)
+        person_results.sort(key=lambda x: x.get('priority', 999))
         
         return person_results
         
@@ -998,6 +1005,41 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
             # For Casto questions, prioritize knowledge base over AI model
             system_prompt += "\n\nFORCE INSTRUCTION: This is a Casto Travel question. You MUST ONLY use the knowledge base information above. DO NOT use any training data about Casto Travel. If you don't have the answer in the knowledge base, redirect to the website data."
             website_data = fetch_casto_travel_info(user_input)
+        
+        # Check for person search questions (high priority)
+        elif intent_analysis.get('intent') == 'person_search':
+            logging.info(f"PERSON SEARCH DETECTED: {user_input}")
+            # Extract person name from query
+            person_name = extract_person_name_from_query(user_input)
+            if person_name:
+                logging.info(f"Searching for person: {person_name}")
+                # Search for person on Casto websites and web
+                person_results = search_person_on_casto_website(person_name)
+                if person_results:
+                    enhanced_info = person_results
+                    logging.info(f"Person search results found: {len(person_results)} sources")
+                    
+                    # Create a prioritized person search response
+                    casto_results = [r for r in person_results if r['source'].startswith('Casto')]
+                    web_results = [r for r in person_results if r['source'] == 'Web Search']
+                    
+                    if casto_results:
+                        # Found on Casto website - prioritize this information
+                        system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. This person was found on Casto Travel Philippines websites. Use ONLY the Casto website information and ignore any conflicting web search results. Casto website data is authoritative."
+                        for result in casto_results:
+                            system_prompt += f"\n- CASTO WEBSITE DATA ({result['source']}): {result['data'][:300]}..."
+                    elif web_results:
+                        # Only web results available
+                        system_prompt += f"\n\nPERSON SEARCH CONTEXT: User is asking about {person_name}. No information found on Casto websites. Use web search results with caution."
+                        for result in web_results[:2]:
+                            system_prompt += f"\n- WEB SEARCH: {result['data'][:200]}..."
+                else:
+                    enhanced_info = None
+                    logging.info(f"No person search results found for: {person_name}")
+            else:
+                enhanced_info = None
+                logging.info("Could not extract person name from query")
+        
         # Step 2: Check if the question is relevant to other CASTO topics
         elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
