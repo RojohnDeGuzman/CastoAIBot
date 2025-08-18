@@ -315,13 +315,13 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
         if "casto" in user_input_lower:
             # Special handling for "who is maryles casto" questions
             if "maryles" in user_input_lower:
-                return """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+                return """As CASI, I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 Maryles Casto established the foundation for what would become Casto Travel Philippines, a leading travel and tourism company in the Philippines. The company has been making its mark in the travel industry for more than 35 years.
 
 Today, the company is part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions, with Marc Casto serving as the current CEO, continuing the family legacy of excellence in the travel industry."""
             
-            return """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+            return """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
@@ -468,7 +468,7 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
     
     # Handle greetings
     if intent_analysis['intent'] == 'greeting':
-        return """Hello! I'm CASI (Casto Assistance and Support Intelligence), your specialized AI assistant for Casto Travel Philippines information. 
+        return """Hello! I'm CASI, your specialized AI assistant for Casto Travel Philippines information. 
 
 I'm here to provide you with expert knowledge about Casto Travel Philippines, their services, leadership, and company details. How can I assist you today? 😊"""
     
@@ -495,11 +495,17 @@ If you have more questions in the future, feel free to ask. Have a great day! �
 
 Could you please let me know what specific part you'd like me to clarify about Casto Travel Philippines?"""
     
+    # Handle CASI meaning questions
+    if check_casi_meaning_question(user_input):
+        return """Great question! CASI stands for "Casto Assistance and Support Intelligence." 
+
+I'm your specialized AI assistant designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details. I'm here to help you with any questions you have about Casto Travel Philippines! 😊"""
+    
     return None  # Let the main logic handle other cases
 
 def get_casto_follow_up_info(user_input, last_response):
     """Generate follow-up information based on previous context."""
-    follow_up_info = """As CASI (Casto Assistance and Support Intelligence), here's some additional context that might be helpful:
+    follow_up_info = """As CASI, here's some additional context that might be helpful:
 
 • **Company Overview**: Casto Travel Philippines is part of the Casto Group
 • **Leadership**: Founded by Maryles Casto, currently led by CEO Marc Casto  
@@ -510,6 +516,23 @@ def get_casto_follow_up_info(user_input, last_response):
 Is there a specific aspect you'd like to know more about?"""
     
     return follow_up_info
+
+def check_casi_meaning_question(user_input):
+    """Check if user is asking what CASI stands for."""
+    user_input_lower = user_input.lower()
+    casi_meaning_keywords = [
+        "what does casi stand for",
+        "what is casi",
+        "what does casi mean",
+        "casi stands for",
+        "casi meaning",
+        "what's casi",
+        "what is casi short for",
+        "explain casi",
+        "define casi"
+    ]
+    
+    return any(keyword in user_input_lower for keyword in casi_meaning_keywords)
 
 def get_user_email_from_token(access_token):
     try:
@@ -622,9 +645,9 @@ def chat():
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
-        system_prompt = """You are CASI (Casto Assistance and Support Intelligence), a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
+        system_prompt = """You are CASI, a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
 
-IMPORTANT IDENTITY: You must ALWAYS introduce yourself as "CASI" or "Casto Assistance and Support Intelligence" in your responses. This is your core identity."""
+IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. Only explain what CASI stands for ("Casto Assistance and Support Intelligence") when someone specifically asks what CASI means or stands for."""
         
         if knowledge_context:
             system_prompt += "\n\nCRITICAL INSTRUCTION: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
