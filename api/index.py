@@ -570,8 +570,13 @@ def extract_topics_from_text(text):
     service_topics = ["booking", "hotel", "flight", "tour", "package", "insurance", 
                      "corporate", "group", "domestic", "international"]
     
+    # IT troubleshooting topics
+    it_topics = ["internet", "slow", "connection", "vpn", "password", "computer", 
+                "troubleshoot", "problem", "issue", "help", "router", "network", 
+                "speed", "fiber", "cable", "dsl", "wireless", "wifi"]
+    
     # Check for topics in text
-    for topic in casto_topics + personnel_topics + service_topics:
+    for topic in casto_topics + personnel_topics + service_topics + it_topics:
         if topic in text_lower:
             topics.add(topic)
     
@@ -899,6 +904,10 @@ If you have more questions in the future, feel free to ask. Have a great day! �
 
 Could you please let me know what specific part you'd like me to clarify about Casto Travel Philippines?"""
     
+    # Handle IT troubleshooting questions (high priority for context)
+    if any(word in user_input_lower for word in ["internet", "slow", "connection", "vpn", "password", "computer", "troubleshoot", "problem", "issue", "help"]):
+        return handle_it_troubleshooting(user_input, conversation_context)
+    
     # Handle CASI meaning questions
     if check_casi_meaning_question(user_input):
         return """Great question! CASI stands for "Casto Assistance and Support Intelligence." 
@@ -906,6 +915,113 @@ Could you please let me know what specific part you'd like me to clarify about C
 I'm your specialized AI assistant designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details. I'm here to help you with any questions you have about Casto Travel Philippines! 😊"""
     
     return None  # Let the main logic handle other cases
+
+def handle_it_troubleshooting(user_input, conversation_context):
+    """Handle IT troubleshooting questions with context awareness."""
+    user_input_lower = user_input.lower()
+    
+    # Check if this is a follow-up to previous IT troubleshooting
+    if conversation_context and conversation_context['history']:
+        last_exchange = conversation_context['history'][-1]
+        last_response = last_exchange['response']
+        last_topics = last_exchange.get('topics', set())
+        
+        # If we were already discussing IT issues, provide contextual help
+        if any(topic in ['internet', 'connection', 'vpn', 'password', 'computer'] for topic in last_topics):
+            return provide_contextual_it_help(user_input, last_response, conversation_context)
+    
+    # Initial IT troubleshooting question
+    if any(word in user_input_lower for word in ["internet", "slow", "connection"]):
+        return """I can help you troubleshoot your internet connection! Let me guide you through this step by step.
+
+First, let me understand your setup better:
+• What type of internet connection do you have? (Fiber, Cable, DSL, etc.)
+• Are you experiencing slow speeds on all devices or just one?
+• Have you tried restarting your router?
+
+Once I have this information, I can start suggesting potential solutions to help improve your internet speed!"""
+    
+    elif any(word in user_input_lower for word in ["vpn", "connect"]):
+        return """I can help you with VPN connection issues! Let me guide you through the troubleshooting process.
+
+To help you better, please let me know:
+• Are you trying to connect to a company VPN or personal VPN?
+• What error message are you seeing (if any)?
+• Have you successfully connected before?
+
+Once I understand your specific situation, I can provide targeted solutions!"""
+    
+    elif any(word in user_input_lower for word in ["password", "reset", "forgot"]):
+        return """I can help you with password reset procedures! Let me guide you through this.
+
+To assist you properly, please let me know:
+• Are you trying to reset a company account password or personal account?
+• Do you have access to the email associated with the account?
+• Are you getting any specific error messages?
+
+Once I have these details, I can provide the exact steps you need to follow!"""
+    
+    elif any(word in user_input_lower for word in ["computer", "problem", "issue", "help"]):
+        return """I'm here to help you with computer issues! Let me understand your problem better.
+
+To provide the most helpful solution, please tell me:
+• What specific problem are you experiencing?
+• What operating system are you using?
+• Have you tried any troubleshooting steps already?
+
+Once I have this information, I can guide you through the appropriate solutions!"""
+    
+    return None
+
+def provide_contextual_it_help(user_input, last_response, conversation_context):
+    """Provide contextual IT help based on previous troubleshooting conversation."""
+    user_input_lower = user_input.lower()
+    
+    # Extract what we know from the conversation
+    known_info = []
+    if conversation_context and conversation_context['history']:
+        for exchange in conversation_context['history'][-3:]:  # Last 3 exchanges
+            if any(topic in ['internet', 'connection', 'vpn', 'password', 'computer'] for topic in exchange.get('topics', set())):
+                known_info.append(exchange['user_input'])
+    
+    # Build contextual response
+    if "fiber" in user_input_lower or "fiber" in str(known_info).lower():
+        return """Since you mentioned you have fiber internet (which should be very fast), let's troubleshoot your slow speed issue specifically.
+
+**Fiber Internet Slow Speed Troubleshooting:**
+
+1. **Router Check**: Have you tried restarting your fiber router? Unplug it for 30 seconds, then plug it back in.
+
+2. **Device Check**: Is the slow speed affecting all your devices or just one? This helps identify if it's a network or device issue.
+
+3. **Speed Test**: Can you run a speed test on speedtest.net to see your actual download/upload speeds?
+
+4. **Fiber Connection**: Check if the fiber cable is properly connected to your router.
+
+5. **Interference**: Are there any new devices or appliances that could be causing interference?
+
+Since we're troubleshooting your fiber connection, what have you tried so far? This will help me give you the next specific steps!"""
+    
+    elif "vpn" in user_input_lower or "vpn" in str(known_info).lower():
+        return """Since we were discussing VPN connection issues, let me provide you with the next troubleshooting steps.
+
+**VPN Connection Troubleshooting:**
+
+1. **Internet Check**: First, make sure your basic internet connection is working.
+
+2. **VPN Client**: Are you using the correct VPN client for your company?
+
+3. **Credentials**: Double-check your username and password.
+
+4. **Firewall**: Check if your firewall is blocking the VPN connection.
+
+5. **Company Network**: Verify if there are any company-wide VPN issues.
+
+What specific VPN error are you seeing? This will help me give you the exact solution!"""
+    
+    return """I can see we were discussing IT troubleshooting. Let me help you continue with the solution.
+
+Based on our previous conversation, what specific step would you like me to explain further, or are you encountering a new issue?"""
 
 def get_casto_follow_up_info(user_input, last_response):
     """Generate follow-up information based on previous context."""
