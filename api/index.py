@@ -215,7 +215,7 @@ def chat():
             
             logging.info("Fetching response from Groq.")
             response = client.chat.completions.create(
-                model="llama3-8b-8192",  # or "mixtral-8x7b-32768"
+                model="llama-3.3-70b-versatile",  # Upgraded to more powerful 70B model
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_input}
