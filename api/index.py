@@ -882,6 +882,55 @@ def search_person_on_casto_website(person_name):
         return []
 
 
+def search_person_on_main_site(person_name):
+    """Targeted search on main Casto site without scraping entire page."""
+    try:
+        # Only search specific sections that might contain personnel info
+        resp = session.get(CASTO_WEBSITE, timeout=10)
+        if resp.status_code != 200:
+            return None
+        
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        
+        # Look for specific sections that might contain personnel info
+        personnel_sections = []
+        
+        # Check for leadership/team sections
+        for section in soup.find_all(['section', 'div'], class_=lambda x: x and any(word in str(x).lower() for word in ['team', 'leadership', 'about', 'people'])):
+            if person_name.lower() in section.get_text().lower():
+                personnel_sections.append(section.get_text().strip())
+        
+        # Check for specific headings containing the person's name
+        for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            if person_name.lower() in heading.get_text().lower():
+                # Get the heading and next few elements
+                content = [heading.get_text().strip()]
+                current = heading
+                for _ in range(2):  # Get next 2 elements
+                    current = current.find_next_sibling()
+                    if current and current.name:
+                        text = current.get_text().strip()
+                        if text and len(text) > 10:
+                            content.append(text)
+                
+                if len(content) > 1:
+                    personnel_sections.append("\n".join(content))
+        
+        if personnel_sections:
+            return {
+                'source': 'Casto Main Website',
+                'data': personnel_sections[0][:500],  # Limit content length
+                'found': True,
+                'priority': 2
+            }
+        
+        return None
+        
+    except Exception as e:
+        logging.error(f"Error searching main site for {person_name}: {e}")
+        return None
+
+
 def search_person_about_us_specific(person_name):
     """Specialized extraction for the About Us page to pull a person's block."""
     try:
