@@ -819,7 +819,7 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
     """Check if we have knowledge base entries for specific people."""
     user_input_lower = user_input.lower()
     
-    # List of known Casto personnel from knowledge base
+    # List of known Casto personnel from knowledge base with multiple variations
     casto_personnel = [
         "maryles casto", "marc casto", "elaine randrup", "alwin benedicto", 
         "george anzures", "ma. berdandina galvez", "berdandina galvez"
@@ -827,14 +827,23 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
     
     # Check if the query is about any known Casto personnel
     for person in casto_personnel:
+        # More flexible matching - check if the person's name appears in the input
         if person in user_input_lower:
+            logging.info(f"Person '{person}' found in input: '{user_input}'")
+            
             # Find the relevant knowledge base entry
             for entry in knowledge_entries:
-                if person in entry.get('question', '').lower() or person in entry.get('answer', '').lower():
+                entry_question = entry.get('question', '').lower()
+                entry_answer = entry.get('answer', '').lower()
+                
+                # Check if person appears in question or answer
+                if person in entry_question or person in entry_answer:
                     logging.info(f"Found knowledge base entry for {person}: {entry.get('answer', '')[:100]}...")
                     return entry.get('answer', '')
+            
+            logging.info(f"Person '{person}' found in input but no matching knowledge base entry")
     
-    logging.info(f"No knowledge base entry found for query: {user_input}")
+    logging.info(f"No knowledge base entry found for query: '{user_input}'")
     return None
 
 
@@ -1331,6 +1340,10 @@ def test_endpoint():
     test_person = "george anzures"
     knowledge_response = check_knowledge_base_for_person(f"who is {test_person}", knowledge_entries)
     
+    # Test with the exact user input that's failing
+    test_user_input = "Do you know George Anzures?"
+    test_response = check_knowledge_base_for_person(test_user_input, knowledge_entries)
+    
     return jsonify({
         "status": "success",
         "message": "Backend is reachable and responding",
@@ -1340,7 +1353,12 @@ def test_endpoint():
             "entries_count": len(knowledge_entries),
             "test_person": test_person,
             "knowledge_found": bool(knowledge_response),
-            "sample_response": knowledge_response[:100] if knowledge_response else "None"
+            "sample_response": knowledge_response[:100] if knowledge_response else "None",
+            "user_input_test": {
+                "input": test_user_input,
+                "response_found": bool(test_response),
+                "response": test_response[:100] if test_response else "None"
+            }
         }
     })
 
