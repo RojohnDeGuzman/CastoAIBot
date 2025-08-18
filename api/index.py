@@ -910,21 +910,27 @@ Could you please let me know what specific part you'd like me to clarify about C
     
     # Handle CASI identity questions (highest priority)
     if check_casi_meaning_question(user_input):
+        logging.info(f"CASI IDENTITY QUESTION DETECTED: {user_input}")
         return get_casi_identity_response()
     
     # Handle CASI creator questions (high priority)
     if check_casi_creator_question(user_input):
+        logging.info(f"CASI CREATOR QUESTION DETECTED: {user_input}")
         # Check if user is specifically asking about the individual person
         if check_specific_person_question(user_input):
+            logging.info(f"SPECIFIC PERSON QUESTION DETECTED: {user_input}")
             return get_casi_specific_creator_response()
         else:
             # General creator question - just mention IT Department
+            logging.info(f"GENERAL CREATOR QUESTION DETECTED: {user_input}")
             return get_casi_creator_response()
     
     # Handle casual CASI mentions
     if check_casi_identity_question(user_input):
+        logging.info(f"CASI CASUAL MENTION DETECTED: {user_input}")
         return get_casi_name_only_response()
     
+    logging.info(f"NO CONTEXTUAL RESPONSE FOR: {user_input} - will use AI model")
     return None  # Let the main logic handle other cases
 
 def handle_it_troubleshooting(user_input, conversation_context):
@@ -1805,7 +1811,29 @@ This information comes directly from the official Casto Travel Philippines websi
             manage_conversation_context(user_id, user_input, default_response)
             return jsonify({"response": default_response})
 
-        # Fallback to model (only for non-Casto personnel questions)
+        # CRITICAL IDENTITY SAFETY CHECK: Prevent ANY identity questions from reaching the AI model
+        identity_keywords = ["what does casi stand for", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning"]
+        if any(keyword in user_input.lower() for keyword in identity_keywords):
+            logging.info(f"CRITICAL IDENTITY SAFETY CHECK: Blocking identity question from AI model: {user_input}")
+            
+            # Force return appropriate identity response
+            if "stand for" in user_input.lower() or "meaning" in user_input.lower():
+                identity_response = get_casi_identity_response()
+            elif "created" in user_input.lower() or "built" in user_input.lower() or "made" in user_input.lower():
+                if check_specific_person_question(user_input):
+                    identity_response = get_casi_specific_creator_response()
+                else:
+                    identity_response = get_casi_creator_response()
+            elif "name" in user_input.lower() or "who are you" in user_input.lower():
+                identity_response = get_casi_name_only_response()
+            else:
+                identity_response = get_casi_identity_response()
+            
+            logging.info(f"CRITICAL IDENTITY CHECK: Returning identity response: {identity_response[:100]}...")
+            manage_conversation_context(user_id, user_input, identity_response)
+            return jsonify({"response": identity_response})
+
+        # Fallback to model (only for non-Casto personnel and non-identity questions)
         import openai
         try:
             client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
