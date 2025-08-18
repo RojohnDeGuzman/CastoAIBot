@@ -39,6 +39,11 @@ CASTO_WEBSITE = "https://www.casto.com.ph/"
 website_cache = {}
 CACHE_DURATION = 300  # 5 minutes
 
+# Conversation memory and context management (simplified for serverless)
+conversation_memory = {}
+CONVERSATION_TIMEOUT = 1800  # 30 minutes
+MAX_CONVERSATION_HISTORY = 5  # Keep last 5 exchanges for serverless
+
 # HTTP session for connection pooling
 session = requests.Session()
 session.headers.update({
@@ -373,6 +378,139 @@ For the most current and detailed information, please visit their official websi
     
     return None  # Let the AI model handle non-Casto questions
 
+def manage_conversation_context(user_id, user_input, response):
+    """Manage conversation context and memory for better follow-up understanding."""
+    current_time = time.time()
+    
+    # Initialize or get existing conversation
+    if user_id not in conversation_memory:
+        conversation_memory[user_id] = {
+            'history': [],
+            'last_updated': current_time,
+            'topics': set(),
+            'intent': None
+        }
+    
+    conv = conversation_memory[user_id]
+    
+    # Clean old conversations
+    if current_time - conv['last_updated'] > CONVERSATION_TIMEOUT:
+        conv['history'] = []
+        conv['topics'] = set()
+        conv['intent'] = None
+    
+    # Add current exchange to history
+    conv['history'].append({
+        'user_input': user_input,
+        'response': response,
+        'timestamp': current_time
+    })
+    
+    # Keep only recent history
+    if len(conv['history']) > MAX_CONVERSATION_HISTORY:
+        conv['history'] = conv['history'][-MAX_CONVERSATION_HISTORY:]
+    
+    # Update last activity
+    conv['last_updated'] = current_time
+    
+    # Extract and track topics
+    casto_keywords = ["casto", "travel", "philippines", "ceo", "founder", "services", "company"]
+    detected_topics = [word for word in casto_keywords if word.lower() in user_input.lower()]
+    conv['topics'].update(detected_topics)
+    
+    return conv
+
+def understand_user_intent(user_input, conversation_context):
+    """Analyze user intent and context for better responses."""
+    user_input_lower = user_input.lower()
+    
+    # Intent classification
+    intents = {
+        'greeting': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
+        'farewell': ['bye', 'goodbye', 'see you', 'thank you', 'thanks'],
+        'question': ['what', 'who', 'when', 'where', 'why', 'how', 'tell me', 'explain'],
+        'clarification': ['what do you mean', 'i don\'t understand', 'can you explain', 'clarify'],
+        'follow_up': ['and', 'also', 'what about', 'how about', 'tell me more'],
+        'comparison': ['difference', 'compare', 'versus', 'vs', 'better', 'best'],
+        'request': ['help', 'assist', 'support', 'need', 'want', 'looking for']
+    }
+    
+    detected_intent = 'general'
+    for intent, keywords in intents.items():
+        if any(keyword in user_input_lower for keyword in keywords):
+            detected_intent = intent
+            break
+    
+    # Context awareness
+    context_clues = []
+    if conversation_context and conversation_context['history']:
+        last_exchange = conversation_context['history'][-1]
+        last_topic = last_exchange.get('topics', set())
+        
+        # Check if this is a follow-up question
+        if any(topic in user_input_lower for topic in last_topic):
+            context_clues.append('follow_up')
+        
+        # Check for pronouns that refer to previous context
+        pronouns = ['it', 'this', 'that', 'they', 'them', 'their', 'the company', 'the service']
+        if any(pronoun in user_input_lower for pronoun in pronouns):
+            context_clues.append('pronoun_reference')
+    
+    return {
+        'intent': detected_intent,
+        'context_clues': context_clues,
+        'is_follow_up': 'follow_up' in context_clues or 'pronoun_reference' in context_clues
+    }
+
+def generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries):
+    """Generate contextual responses based on conversation history and intent."""
+    user_input_lower = user_input.lower()
+    
+    # Handle greetings
+    if intent_analysis['intent'] == 'greeting':
+        return """Hello! I'm CASI, your AI virtual assistant. I'm here to help you with information about Casto Travel Philippines and any other questions you might have. 
+
+How can I assist you today? 😊"""
+    
+    # Handle farewells
+    if intent_analysis['intent'] == 'farewell':
+        return """Thank you for chatting with me! I'm glad I could help you with information about Casto Travel Philippines. 
+
+If you have more questions in the future, feel free to ask. Have a great day! 👋"""
+    
+    # Handle follow-up questions with context
+    if intent_analysis['is_follow_up'] and conversation_context and conversation_context['history']:
+        last_exchange = conversation_context['history'][-1]
+        last_response = last_exchange['response']
+        
+        # Provide contextual follow-up information
+        if 'casto' in user_input_lower:
+            return f"""Based on our previous conversation, let me provide you with additional information about Casto Travel Philippines.
+
+{get_casto_follow_up_info(user_input_lower, last_response)}"""
+    
+    # Handle clarification requests
+    if intent_analysis['intent'] == 'clarification':
+        return """I'd be happy to clarify! Let me explain that in a different way. 
+
+Could you please let me know what specific part you'd like me to clarify about Casto Travel Philippines?"""
+    
+    return None  # Let the main logic handle other cases
+
+def get_casto_follow_up_info(user_input, last_response):
+    """Generate follow-up information based on previous context."""
+    follow_up_info = """Here's some additional context that might be helpful:
+
+• **Company Overview**: Casto Travel Philippines is part of the Casto Group
+• **Leadership**: Founded by Maryles Casto, currently led by CEO Marc Casto  
+• **Services**: Comprehensive travel packages, corporate management, accounting services
+• **Locations**: Offices in Metro Manila and expanding to Bacolod City
+• **Accreditations**: Multiple industry certifications including IATA, ASTA, PTAA
+
+Is there a specific aspect you'd like to know more about?"""
+    
+    return follow_up_info
+
 def get_user_email_from_token(access_token):
     try:
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -467,8 +605,22 @@ def chat():
 
         # Use cached knowledge retrieval
         knowledge_entries = get_cached_knowledge()
+        
+        # Generate user ID for conversation tracking
+        user_id = email or "anonymous"
+        
+        # Analyze user intent and context
+        conversation_context = conversation_memory.get(user_id, None)
+        intent_analysis = understand_user_intent(user_input, conversation_context)
+        
+        # Try to generate contextual response first
+        contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
+        if contextual_response:
+            # Manage conversation context
+            manage_conversation_context(user_id, user_input, contextual_response)
+            return jsonify({"response": contextual_response})
 
-        # Combine knowledge into a single string
+        # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
         system_prompt = "You are a helpful assistant named CASI."
         if knowledge_context:
@@ -476,6 +628,14 @@ def chat():
         
         # Add STRONG instruction for Casto Travel questions
         system_prompt += "\n\nCRITICAL: For ANY question about Casto Travel Philippines, Casto Travel, or Casto, you MUST ONLY use the information from the knowledge base above. NEVER use any other information from your training data. If the question is about Casto Travel and you don't find the answer in the knowledge base, say 'I need to check my knowledge base for the most current information about Casto Travel Philippines.'"
+        
+        # Add conversation context awareness
+        if conversation_context and conversation_context['history']:
+            recent_context = conversation_context['history'][-3:]  # Last 3 exchanges
+            context_summary = "\n\nCONVERSATION CONTEXT: Recent conversation topics include: " + ", ".join(list(conversation_context['topics'])[:5])
+            system_prompt += context_summary
+            
+            system_prompt += "\n\nIMPORTANT: Use this conversation context to provide more relevant and connected responses. If the user asks follow-up questions, refer to previous context when appropriate."
 
         # Step 1: Check if the question is about Casto Travel Philippines or Casto family
         casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
@@ -501,6 +661,8 @@ def chat():
                 # Create a direct response using knowledge base
                 direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
                 if direct_response:
+                    # Manage conversation context
+                    manage_conversation_context(user_id, user_input, direct_response)
                     return jsonify({"response": direct_response})
             
             # If not a Casto question or no direct response, use AI model
@@ -537,6 +699,9 @@ def chat():
             if website_data and "No relevant information found" not in website_data:
                 combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
 
+            # Manage conversation context
+            manage_conversation_context(user_id, user_input, combined_response)
+            
             return jsonify({"response": combined_response})
         
         except Exception as e:
@@ -558,6 +723,38 @@ def test_endpoint():
         "endpoint": "/test"
     })
 
+@app.route("/conversation/context", methods=["GET"])
+def get_conversation_context():
+    """Get current conversation context for a user."""
+    access_token = request.args.get("access_token")
+    email = get_user_email_from_token(access_token) if access_token else "test@example.com"
+    
+    user_id = email
+    if user_id in conversation_memory:
+        conv = conversation_memory[user_id]
+        return jsonify({
+            "user_id": user_id,
+            "topics": list(conv['topics']),
+            "conversation_count": len(conv['history']),
+            "last_updated": conv['last_updated'],
+            "recent_topics": list(conv['topics'])[:5]
+        })
+    else:
+        return jsonify({"message": "No conversation history found"})
+
+@app.route("/conversation/clear", methods=["POST"])
+def clear_conversation_context():
+    """Clear conversation context for a user."""
+    access_token = request.json.get("access_token") if request.json else None
+    email = get_user_email_from_token(access_token) if access_token else "test@example.com"
+    
+    user_id = email
+    if user_id in conversation_memory:
+        del conversation_memory[user_id]
+        return jsonify({"message": "Conversation context cleared successfully"})
+    else:
+        return jsonify({"message": "No conversation context to clear"})
+
 @app.route("/", methods=["GET"])
 def health_check():
     """Health check endpoint"""
@@ -570,6 +767,9 @@ def health_check():
             "ai_chat": True,
             "website_scraping": True,
             "knowledge_base": "placeholder (cloud DB needed)",
+            "conversation_memory": True,
+            "intent_recognition": True,
+            "context_awareness": True,
             "authentication": "disabled (temporary)",
             "rate_limiting": True
         },
@@ -577,6 +777,8 @@ def health_check():
             "test": "/test",
             "chat": "/chat",
             "knowledge": "/knowledge",
+            "conversation_context": "/conversation/context",
+            "conversation_clear": "/conversation/clear",
             "health": "/"
         },
         "note": "Authentication is temporarily disabled for testing. Will be re-enabled once Microsoft Graph API integration is working."
