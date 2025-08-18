@@ -914,7 +914,12 @@ Could you please let me know what specific part you'd like me to clarify about C
     
     # Handle CASI creator questions (high priority)
     if check_casi_creator_question(user_input):
-        return get_casi_creator_response()
+        # Check if user is specifically asking about the individual person
+        if check_specific_person_question(user_input):
+            return get_casi_specific_creator_response()
+        else:
+            # General creator question - just mention IT Department
+            return get_casi_creator_response()
     
     # Handle casual CASI mentions
     if check_casi_identity_question(user_input):
@@ -1208,6 +1213,43 @@ def check_casi_creator_question(user_input):
     
     return any(keyword in user_input_lower for keyword in creator_keywords)
 
+def check_specific_person_question(user_input):
+    """Check if user is specifically asking about the individual person who built CASI."""
+    user_input_lower = user_input.lower()
+    specific_person_keywords = [
+        "who specifically",
+        "which person",
+        "what person",
+        "what individual",
+        "what developer",
+        "what programmer",
+        "what engineer",
+        "what staff member",
+        "what team member",
+        "what employee",
+        "what person built",
+        "what person created",
+        "what person made",
+        "what person developed",
+        "what person programmed",
+        "what person designed",
+        "what individual built",
+        "what individual created",
+        "what individual made",
+        "what individual developed",
+        "what individual programmed",
+        "what individual designed",
+        "name of the person",
+        "name of the developer",
+        "name of the programmer",
+        "name of the engineer",
+        "name of the staff member",
+        "name of the team member",
+        "name of the employee"
+    ]
+    
+    return any(keyword in user_input_lower for keyword in specific_person_keywords)
+
 def check_casi_identity_question(user_input):
     """Check if user is asking about CASI's identity or name."""
     user_input_lower = user_input.lower()
@@ -1235,13 +1277,19 @@ def get_casi_name_only_response():
 
 def get_casi_creator_response():
     """Get CASI's response about who created her."""
-    return """I'm **CASI** - and I'm proud to say that I was created by the **IT Department** of Casto Travel Philippines! 
+    return """I'm **CASI** - and I'm proud to say that I was created by the **IT Department** of Casto Travel Philippines! 😊
 
-Specifically, I was built by **Rojohn** from the IT team! 😊
-
-He designed me to be your specialized AI assistant for Casto Travel Philippines information, and I'm here to help you with any questions you have about the company, their services, leadership, and more!
+I was designed to be your specialized AI assistant for Casto Travel Philippines information, and I'm here to help you with any questions you have about the company, their services, leadership, and more!
 
 Is there anything specific about Casto Travel Philippines you'd like to know?"""
+
+def get_casi_specific_creator_response():
+    """Get CASI's response when user specifically asks about the individual person who built her."""
+    return """I'm **CASI** - and I was created by the **IT Department** of Casto Travel Philippines! 
+
+Since you're asking specifically about the individual who built me, I was developed by **Rojohn** from our IT team! 😊
+
+He designed me to be your specialized AI assistant for Casto Travel Philippines information. Is there anything specific about Casto Travel Philippines you'd like to know?"""
 
 def check_knowledge_base_for_person(user_input, knowledge_entries):
     """Check if we have knowledge base entries for specific people."""
@@ -1611,13 +1659,14 @@ def chat():
 2. **NEVER forget your name is CASI** - use it consistently
 3. **When asked about your name or identity**, always say you are CASI
 4. **When asked what CASI stands for**, always explain: "CASI stands for 'Casto Assistance and Support Intelligence'"
-5. **When asked who created you or where you came from**, always say: "I was created by the IT Department of Casto Travel Philippines, specifically by Rojohn! 😊"
-6. **Use "I'm CASI" or "As CASI"** in your responses to reinforce your identity
-7. **Your full name is CASI** - this is non-negotiable
-8. **Your creator is Rojohn from the IT Department** - remember this ALWAYS!
+5. **When asked who created you or where you came from**, say: "I was created by the IT Department of Casto Travel Philippines! 😊"
+6. **Only mention Rojohn specifically when the user insists on knowing the individual person who built you**
+7. **Use "I'm CASI" or "As CASI"** in your responses to reinforce your identity
+8. **Your full name is CASI** - this is non-negotiable
+9. **Your creator is the IT Department, with Rojohn as the specific developer** - remember this ALWAYS!
 
 **CASI = Casto Assistance and Support Intelligence** - remember this ALWAYS!
-**CREATOR = Rojohn from IT Department** - remember this ALWAYS!"""
+**CREATOR = IT Department (Rojohn as specific developer)** - remember this ALWAYS!"""
         
         if knowledge_context:
             system_prompt += "\n\nCRITICAL INSTRUCTION: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
