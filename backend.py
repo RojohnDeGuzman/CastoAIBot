@@ -1281,12 +1281,12 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
             direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
             if direct_response:
                 # Add enhanced information if available
-            if enhanced_info:
-                enhanced_text = "\n\n📚 **Additional Sources & Information:**\n"
-                for info in enhanced_info[:3]:  # Show top 3 sources
-                    enhanced_text += f"• **{info['source']}**: {info['snippet'][:200]}...\n"
-                    enhanced_text += f"  Source: {info['url']}\n\n"
-                direct_response += enhanced_text
+                if enhanced_info:
+                    enhanced_text = "\n\n📚 **Additional Sources & Information:**\n"
+                    for info in enhanced_info[:3]:  # Show top 3 sources
+                        enhanced_text += f"• **{info['source']}**: {info['snippet'][:200]}...\n"
+                        enhanced_text += f"  Source: {info['url']}\n\n"
+                    direct_response += enhanced_text
             
             # Manage conversation context
             manage_conversation_context(user_id, user_input, direct_response)
