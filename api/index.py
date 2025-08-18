@@ -1194,16 +1194,32 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
 
         # Check for Casto personnel questions FIRST (highest priority - before any AI model calls)
         casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
-        if any(name.lower() in user_input.lower() for name in casto_personnel_names):
-            logging.info(f"CASTO PERSONNEL QUESTION DETECTED - Using knowledge base only for: {user_input}")
+        
+        # Enhanced check with more flexible matching
+        user_input_lower = user_input.lower()
+        detected_person = None
+        
+        for name in casto_personnel_names:
+            if name.lower() in user_input_lower:
+                detected_person = name
+                break
+        
+        if detected_person:
+            logging.info(f"CASTO PERSONNEL QUESTION DETECTED for '{detected_person}' in: {user_input}")
+            logging.info(f"Knowledge entries available: {len(knowledge_entries)}")
+            
             # Check knowledge base directly for this person
             knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
             if knowledge_response:
-                logging.info(f"Found knowledge base entry, returning directly")
+                logging.info(f"Found knowledge base entry for {detected_person}, returning directly")
                 manage_conversation_context(user_id, user_input, knowledge_response)
                 return jsonify({"response": knowledge_response})
             else:
-                logging.info(f"No knowledge base entry found for {user_input}")
+                logging.info(f"ERROR: No knowledge base entry found for {detected_person} despite being in personnel list")
+                # Return a fallback response instead of proceeding to AI model
+                fallback_response = f"I should have information about {detected_person} in my knowledge base, but I'm unable to retrieve it at the moment. Please contact Casto Travel Philippines directly for the most current information."
+                manage_conversation_context(user_id, user_input, fallback_response)
+                return jsonify({"response": fallback_response})
         
         # Check for Casto family questions (secondary priority)
         elif any(name.lower() in user_input.lower() for name in ["maryles casto", "marc casto"]):
@@ -1301,11 +1317,22 @@ This information comes directly from the official Casto Travel Philippines websi
 @app.route("/test", methods=["GET"])
 def test_endpoint():
     """Simple test endpoint for connectivity testing"""
+    # Test knowledge base functionality
+    knowledge_entries = get_cached_knowledge()
+    test_person = "george anzures"
+    knowledge_response = check_knowledge_base_for_person(f"who is {test_person}", knowledge_entries)
+    
     return jsonify({
         "status": "success",
         "message": "Backend is reachable and responding",
         "timestamp": datetime.utcnow().isoformat(),
-        "endpoint": "/test"
+        "endpoint": "/test",
+        "knowledge_base_test": {
+            "entries_count": len(knowledge_entries),
+            "test_person": test_person,
+            "knowledge_found": bool(knowledge_response),
+            "sample_response": knowledge_response[:100] if knowledge_response else "None"
+        }
     })
 
 @app.route("/conversation/context", methods=["GET"])
