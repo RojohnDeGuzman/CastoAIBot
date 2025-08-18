@@ -365,6 +365,14 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
     # Check for CEO/founder questions first
     if any(word in user_input_lower for word in ["ceo", "founder", "who", "leader"]):
         if "casto" in user_input_lower:
+            # Special handling for "who is maryles casto" questions
+            if "maryles" in user_input_lower:
+                return """Based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+
+Maryles Casto established the foundation for what would become Casto Travel Philippines, a leading travel and tourism company in the Philippines. The company has been making its mark in the travel industry for more than 35 years.
+
+Today, the company is part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions, with Marc Casto serving as the current CEO, continuing the family legacy of excellence in the travel industry."""
+            
             return """Based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
@@ -495,8 +503,8 @@ def chat():
     # Add STRONG instruction for Casto Travel questions
     system_prompt += "\n\nCRITICAL: For ANY question about Casto Travel Philippines, Casto Travel, or Casto, you MUST ONLY use the information from the knowledge base above. NEVER use any other information from your training data. If the question is about Casto Travel and you don't find the answer in the knowledge base, say 'I need to check my knowledge base for the most current information about Casto Travel Philippines.'"
 
-    # Step 1: Check if the question is about Casto Travel Philippines
-    casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership"]
+    # Step 1: Check if the question is about Casto Travel Philippines or Casto family
+    casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
     website_data = None
     
     # Force knowledge base usage for ALL Casto-related questions
