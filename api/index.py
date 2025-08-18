@@ -470,7 +470,7 @@ For the most current and detailed information, please visit their official websi
     return None  # Let the AI model handle non-Casto questions
 
 def manage_conversation_context(user_id, user_input, response):
-    """Manage conversation context and memory for better follow-up understanding."""
+    """Enhanced conversation context and memory management for better follow-up understanding."""
     current_time = time.time()
     
     # Initialize or get existing conversation
@@ -479,7 +479,11 @@ def manage_conversation_context(user_id, user_input, response):
             'history': [],
             'last_updated': current_time,
             'topics': set(),
-            'intent': None
+            'intent': None,
+            'current_focus': None,
+            'conversation_depth': 0,
+            'related_questions': [],
+            'user_preferences': set()
         }
     
     conv = conversation_memory[user_id]
@@ -489,30 +493,259 @@ def manage_conversation_context(user_id, user_input, response):
         conv['history'] = []
         conv['topics'] = set()
         conv['intent'] = None
+        conv['current_focus'] = None
+        conv['conversation_depth'] = 0
+        conv['related_questions'] = []
+        conv['user_preferences'] = set()
     
-    # Add current exchange to history
-    conv['history'].append({
+    # Add current exchange to history with enhanced metadata
+    exchange_data = {
         'user_input': user_input,
         'response': response,
-        'timestamp': current_time
-    })
+        'timestamp': current_time,
+        'intent': analyze_exchange_intent(user_input),
+        'topics': extract_topics_from_text(user_input),
+        'entities': extract_entities_from_text(user_input)
+    }
     
-    # Keep only recent history
-    if len(conv['history']) > MAX_CONVERSATION_HISTORY:
-        conv['history'] = conv['history'][-MAX_CONVERSATION_HISTORY:]
+    conv['history'].append(exchange_data)
+    
+    # Keep more history for better context (increased from 5 to 10)
+    if len(conv['history']) > 10:
+        conv['history'] = conv['history'][-10:]
     
     # Update last activity
     conv['last_updated'] = current_time
     
-    # Extract and track topics
-    casto_keywords = ["casto", "travel", "philippines", "ceo", "founder", "services", "company"]
-    detected_topics = [word for word in casto_keywords if word.lower() in user_input.lower()]
-    conv['topics'].update(detected_topics)
+    # Enhanced topic tracking
+    new_topics = extract_topics_from_text(user_input)
+    conv['topics'].update(new_topics)
+    
+    # Track conversation focus and depth
+    if len(conv['history']) > 1:
+        conv['conversation_depth'] = len(conv['history'])
+        conv['current_focus'] = determine_conversation_focus(conv['history'])
+    
+    # Track related questions for better follow-up suggestions
+    if is_follow_up_question(user_input, conv['history']):
+        conv['related_questions'].append(user_input)
+        if len(conv['related_questions']) > 5:
+            conv['related_questions'] = conv['related_questions'][-5:]
+    
+    # Extract user preferences and interests
+    user_prefs = extract_user_preferences(user_input, response)
+    conv['user_preferences'].update(user_prefs)
     
     return conv
 
+def analyze_exchange_intent(user_input):
+    """Analyze the intent of a single exchange."""
+    user_input_lower = user_input.lower()
+    
+    if any(word in user_input_lower for word in ["who", "what", "when", "where", "why", "how"]):
+        return "question"
+    elif any(word in user_input_lower for word in ["thank", "thanks", "appreciate"]):
+        return "gratitude"
+    elif any(word in user_input_lower for word in ["yes", "no", "okay", "ok", "sure"]):
+        return "confirmation"
+    elif any(word in user_input_lower for word in ["more", "tell me more", "explain", "elaborate"]):
+        return "elaboration_request"
+    else:
+        return "statement"
+
+def extract_topics_from_text(text):
+    """Extract relevant topics from text."""
+    text_lower = text.lower()
+    topics = set()
+    
+    # Casto-related topics
+    casto_topics = ["casto", "travel", "philippines", "ceo", "founder", "leadership", 
+                    "services", "company", "business", "tourism", "agency"]
+    
+    # Personnel topics
+    personnel_topics = ["maryles casto", "marc casto", "elaine randrup", 
+                       "alwin benedicto", "george anzures", "berdandina galvez"]
+    
+    # Service topics
+    service_topics = ["booking", "hotel", "flight", "tour", "package", "insurance", 
+                     "corporate", "group", "domestic", "international"]
+    
+    # Check for topics in text
+    for topic in casto_topics + personnel_topics + service_topics:
+        if topic in text_lower:
+            topics.add(topic)
+    
+    return topics
+
+def extract_entities_from_text(text):
+    """Extract named entities and key information from text."""
+    text_lower = text.lower()
+    entities = set()
+    
+    # Check for company names
+    if "casto" in text_lower:
+        entities.add("Casto Travel Philippines")
+    
+    # Check for personnel names
+    personnel = ["maryles casto", "marc casto", "elaine randrup", 
+                "alwin benedicto", "george anzures", "berdandina galvez"]
+    
+    for person in personnel:
+        if person in text_lower:
+            entities.add(person.title())
+    
+    # Check for locations
+    locations = ["philippines", "manila", "bacolod", "silicon valley", "california"]
+    for location in locations:
+        if location in text_lower:
+            entities.add(location.title())
+    
+    return entities
+
+def determine_conversation_focus(history):
+    """Determine the main focus of the conversation based on history."""
+    if not history:
+        return None
+    
+    # Count topic frequencies
+    topic_counts = {}
+    for exchange in history:
+        for topic in exchange.get('topics', []):
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+    
+    # Return the most frequent topic
+    if topic_counts:
+        return max(topic_counts, key=topic_counts.get)
+    return None
+
+def is_follow_up_question(user_input, history):
+    """Determine if the current input is a follow-up question."""
+    if not history:
+        return False
+    
+    user_input_lower = user_input.lower()
+    
+    # Follow-up indicators
+    follow_up_indicators = [
+        "and", "also", "what about", "how about", "tell me more", "explain",
+        "elaborate", "can you", "could you", "would you", "more details",
+        "in addition", "furthermore", "moreover", "besides", "additionally"
+    ]
+    
+    # Check for follow-up indicators
+    if any(indicator in user_input_lower for indicator in follow_up_indicators):
+        return True
+    
+    # Check for pronouns that refer to previous context
+    pronouns = ["it", "this", "that", "they", "them", "their", "the company", 
+                "the service", "the person", "he", "she", "his", "her"]
+    
+    if any(pronoun in user_input_lower for pronoun in pronouns):
+        return True
+    
+    # Check if input is very short (likely a follow-up)
+    if len(user_input.split()) <= 3:
+        return True
+    
+    return False
+
+def extract_user_preferences(user_input, response):
+    """Extract user preferences and interests from the exchange."""
+    user_input_lower = user_input.lower()
+    preferences = set()
+    
+    # Travel preferences
+    if any(word in user_input_lower for word in ["domestic", "local", "philippines"]):
+        preferences.add("domestic_travel")
+    if any(word in user_input_lower for word in ["international", "abroad", "overseas"]):
+        preferences.add("international_travel")
+    if any(word in user_input_lower for word in ["business", "corporate", "work"]):
+        preferences.add("business_travel")
+    if any(word in user_input_lower for word in ["leisure", "vacation", "holiday", "tour"]):
+        preferences.add("leisure_travel")
+    
+    # Information depth preferences
+    if any(word in user_input_lower for word in ["detailed", "comprehensive", "full", "complete"]):
+        preferences.add("detailed_info")
+    if any(word in user_input_lower for word in ["brief", "summary", "overview", "quick"]):
+        preferences.add("brief_info")
+    
+    return preferences
+
+def generate_follow_up_suggestions(user_input, conversation_context, current_response):
+    """Generate contextual follow-up suggestions based on conversation context."""
+    if not conversation_context:
+        return []
+    
+    suggestions = []
+    current_focus = conversation_context.get('current_focus', 'general')
+    recent_topics = conversation_context.get('topics', set())
+    user_preferences = conversation_context.get('user_preferences', set())
+    
+    # Casto Travel Philippines focused suggestions
+    if 'casto' in recent_topics or 'travel' in recent_topics:
+        if 'leadership' in recent_topics or 'ceo' in recent_topics:
+            suggestions.extend([
+                "What services does Casto Travel Philippines offer?",
+                "Can you tell me more about Casto's history and background?",
+                "What are Casto Travel's accreditations and certifications?"
+            ])
+        
+        if 'services' in recent_topics:
+            suggestions.extend([
+                "Who are the key leaders at Casto Travel Philippines?",
+                "What makes Casto Travel different from other agencies?",
+                "Can you provide contact information for Casto Travel?"
+            ])
+        
+        if 'personnel' in recent_topics or any(person in str(recent_topics) for person in ['maryles', 'marc', 'elaine', 'alwin', 'george', 'berdandina']):
+            suggestions.extend([
+                "What is the organizational structure of Casto Travel?",
+                "Can you tell me about Casto's company culture and values?",
+                "What are Casto Travel's future plans and expansion?"
+            ])
+    
+    # Travel service focused suggestions
+    if 'travel' in recent_topics and 'casto' not in recent_topics:
+        suggestions.extend([
+            "What are the best travel destinations in the Philippines?",
+            "Can you help with travel planning and booking information?",
+            "What travel insurance options are available?"
+        ])
+    
+    # General knowledge suggestions
+    if 'philippines' in recent_topics:
+        suggestions.extend([
+            "What are the visa requirements for visiting the Philippines?",
+            "Can you tell me about Philippine culture and traditions?",
+            "What are the best times to visit the Philippines?"
+        ])
+    
+    # Personalized suggestions based on user preferences
+    if 'domestic_travel' in user_preferences:
+        suggestions.append("What are the top domestic travel packages available?")
+    
+    if 'international_travel' in user_preferences:
+        suggestions.append("What international destinations does Casto Travel specialize in?")
+    
+    if 'business_travel' in user_preferences:
+        suggestions.append("What corporate travel management services are offered?")
+    
+    # Default suggestions if no specific context
+    if not suggestions:
+        suggestions = [
+            "What services does Casto Travel Philippines offer?",
+            "Can you tell me about Casto's leadership team?",
+            "What makes Casto Travel unique in the industry?"
+        ]
+    
+    # Limit to 3-4 suggestions and ensure uniqueness
+    unique_suggestions = list(dict.fromkeys(suggestions))[:4]
+    
+    return unique_suggestions
+
 def understand_user_intent(user_input, conversation_context):
-    """Analyze user intent and context for better responses."""
+    """Enhanced user intent analysis with conversation context awareness."""
     user_input_lower = user_input.lower()
     
     # Check for Casto-related questions FIRST (highest priority)
@@ -1186,13 +1419,28 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         # Add STRONG instruction for Casto Travel questions
         system_prompt += "\n\nCRITICAL: For ANY question about Casto Travel Philippines, Casto Travel, or Casto, you MUST ONLY use the information from the knowledge base above. NEVER use any other information from your training data. If the question is about Casto Travel and you don't find the answer in the knowledge base, say 'I need to check my knowledge base for the most current information about Casto Travel Philippines.'"
         
-        # Add conversation context awareness
+        # Enhanced conversation context awareness
         if conversation_context and conversation_context['history']:
             recent_context = conversation_context['history'][-3:]  # Last 3 exchanges
-            context_summary = "\n\nCONVERSATION CONTEXT: Recent conversation topics include: " + ", ".join(list(conversation_context['topics'])[:5])
+            current_focus = conversation_context.get('current_focus', 'general')
+            conversation_depth = conversation_context.get('conversation_depth', 0)
+            related_questions = conversation_context.get('related_questions', [])
+            user_preferences = conversation_context.get('user_preferences', set())
+            
+            context_summary = f"\n\nCONVERSATION CONTEXT:"
+            context_summary += f"\n- Current Focus: {current_focus}"
+            context_summary += f"\n- Conversation Depth: {conversation_depth} exchanges"
+            context_summary += f"\n- Recent Topics: {', '.join(list(conversation_context['topics'])[:5])}"
+            
+            if related_questions:
+                context_summary += f"\n- Related Questions: {', '.join(related_questions[-3:])}"
+            
+            if user_preferences:
+                context_summary += f"\n- User Preferences: {', '.join(list(user_preferences)[:3])}"
+            
             system_prompt += context_summary
             
-            system_prompt += "\n\nIMPORTANT: Use this conversation context to provide more relevant and connected responses. If the user asks follow-up questions, refer to previous context when appropriate."
+            system_prompt += "\n\nIMPORTANT: Use this conversation context to provide more relevant and connected responses. If the user asks follow-up questions, refer to previous context when appropriate. Build upon previous information and provide complete, contextual answers."
 
         # Step 1: Check if the question is about Casto Travel Philippines or Casto family
         casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
@@ -1326,7 +1574,19 @@ This information comes directly from the official Casto Travel Philippines websi
             combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
         combined_response = make_links_clickable(combined_response)
         manage_conversation_context(user_id, user_input, combined_response)
-        return jsonify({"response": combined_response})
+        
+        # Generate contextual follow-up suggestions
+        follow_up_suggestions = generate_follow_up_suggestions(user_input, conversation_context, combined_response)
+        
+        return jsonify({
+            "response": combined_response,
+            "follow_up_suggestions": follow_up_suggestions,
+            "conversation_context": {
+                "current_focus": conversation_context.get('current_focus', 'general') if conversation_context else 'general',
+                "conversation_depth": conversation_context.get('conversation_depth', 0) if conversation_context else 0,
+                "recent_topics": list(conversation_context.get('topics', set()))[:5] if conversation_context else []
+            }
+        })
 
     except Exception as e:
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
@@ -1364,7 +1624,7 @@ def test_endpoint():
 
 @app.route("/conversation/context", methods=["GET"])
 def get_conversation_context():
-    """Get current conversation context for a user."""
+    """Get enhanced conversation context for a user."""
     access_token = request.args.get("access_token")
     email = get_user_email_from_token(access_token) if access_token else "test@example.com"
     
@@ -1373,10 +1633,29 @@ def get_conversation_context():
         conv = conversation_memory[user_id]
         return jsonify({
             "user_id": user_id,
-            "topics": list(conv['topics']),
-            "conversation_count": len(conv['history']),
-            "last_updated": conv['last_updated'],
-            "recent_topics": list(conv['topics'])[:5]
+            "conversation_summary": {
+                "total_exchanges": len(conv['history']),
+                "conversation_depth": conv.get('conversation_depth', 0),
+                "current_focus": conv.get('current_focus', 'general'),
+                "last_updated": conv['last_updated']
+            },
+            "topics": {
+                "all_topics": list(conv['topics']),
+                "recent_topics": list(conv['topics'])[:5],
+                "primary_focus": conv.get('current_focus', 'general')
+            },
+            "user_preferences": list(conv.get('user_preferences', set())),
+            "related_questions": conv.get('related_questions', [])[-5:],
+            "conversation_flow": [
+                {
+                    "exchange": i + 1,
+                    "user_input": exchange.get('user_input', ''),
+                    "intent": exchange.get('intent', 'unknown'),
+                    "topics": list(exchange.get('topics', set())),
+                    "timestamp": exchange.get('timestamp', 0)
+                }
+                for i, exchange in enumerate(conv['history'][-5:])
+            ]
         })
     else:
         return jsonify({"message": "No conversation history found"})
