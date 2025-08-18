@@ -822,6 +822,24 @@ def extract_person_name_from_query(user_input):
     
     return None
 
+def make_links_clickable(text):
+    """Convert URLs in text to clickable links."""
+    import re
+    
+    # Pattern to match URLs (http/https/www)
+    url_pattern = r'(https?://[^\s]+|www\.[^\s]+)'
+    
+    def replace_url(match):
+        url = match.group(1)
+        # Add https:// if it starts with www
+        if url.startswith('www.'):
+            url = 'https://' + url
+        return f'<a href="{url}" target="_blank" rel="noopener noreferrer">{url}</a>'
+    
+    # Replace URLs with clickable links
+    clickable_text = re.sub(url_pattern, replace_url, text)
+    return clickable_text
+
 def create_casto_direct_response(user_input, knowledge_entries, website_data):
     """Create a direct response for Casto Travel questions using knowledge base only."""
     user_input_lower = user_input.lower()
@@ -829,13 +847,15 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
     # Check for incorrect CEO claims first
     is_incorrect_ceo, incorrect_name = check_incorrect_ceo_claims(user_input)
     if is_incorrect_ceo:
-        return f"""As CASI, I can provide you with the correct information about Casto Travel Philippines leadership.
-
-Based on our knowledge base:
-• **Founder**: Maryles Casto
-• **Current CEO**: Marc Casto
-
-I don't have information about {incorrect_name.title()} in relation to Casto Travel Philippines."""
+            response_text = f"""As CASI, I can provide you with the correct information about Casto Travel Philippines leadership.
+    
+    Based on our knowledge base:
+    • **Founder**: Maryles Casto
+    • **Current CEO**: Marc Casto
+    
+    I don't have information about {incorrect_name.title()} in relation to Casto Travel Philippines."""
+    
+    return make_links_clickable(response_text)
     
     # Check for CEO/founder questions first
     if any(word in user_input_lower for word in ["ceo", "founder", "who", "leader"]):
@@ -848,16 +868,18 @@ Maryles Casto established the foundation for what would become Casto Travel Phil
 
 Today, the company is part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions, with Marc Casto serving as the current CEO, continuing the family legacy of excellence in the travel industry."""
             
-            return """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+            response_text = """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
 For the most current leadership information, please contact Casto Travel Philippines directly at https://www.casto.com.ph/"""
+            
+            return make_links_clickable(response_text)
     
     # Check for company information
     if any(word in user_input_lower for word in ["what", "company", "business", "services"]):
         if "casto" in user_input_lower:
-            return """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+            response_text = """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company has been making its mark in the travel industry for more than 35 years. It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in Metro Manila, plus expansion to Bacolod City.
 
@@ -870,6 +892,8 @@ Services include:
 • Group travel arrangements
 
 For more detailed information, visit their official website: https://www.casto.com.ph/"""
+            
+            return make_links_clickable(response_text)
     
     # Check for history questions
     if any(word in user_input_lower for word in ["history", "background", "when", "started"]):
@@ -897,11 +921,13 @@ This makes it one of the most certified travel agencies in the Philippines."""
     
     # If no specific match but it's a Casto question, provide general info
     if "casto" in user_input_lower:
-        return """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+        response_text = """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company was founded by Maryles Casto and has been serving the travel industry for more than 35 years. They offer comprehensive travel services including domestic and international packages, hotel bookings, tours, travel insurance, and corporate travel management.
 
 For the most current and detailed information, please visit their official website: https://www.casto.com.ph/"""
+        
+        return make_links_clickable(response_text)
     
     return None  # Let the AI model handle non-Casto questions
 
@@ -1127,6 +1153,9 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         combined_response = chatbot_message
         if website_data and "No relevant information found" not in website_data:
             combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
+
+        # Make all links clickable in the combined response
+        combined_response = make_links_clickable(combined_response)
 
         # Manage conversation context
         manage_conversation_context(user_id, user_input, combined_response)
