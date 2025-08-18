@@ -421,7 +421,21 @@ def understand_user_intent(user_input, conversation_context):
     """Analyze user intent and context for better responses."""
     user_input_lower = user_input.lower()
     
-    # Intent classification
+    # Check for Casto-related questions FIRST (highest priority)
+    casto_keywords = [
+        "casto", "marc casto", "maryles casto", "ceo", "founder", "leader", 
+        "casto travel", "casto philippines", "casto group", "casto travel philippines"
+    ]
+    
+    # If it's a Casto question, override other intent detection
+    if any(keyword in user_input_lower for keyword in casto_keywords):
+        return {
+            'intent': 'casto_question',
+            'context_clues': ['casto_focus'],
+            'is_follow_up': False
+        }
+    
+    # Intent classification for non-Casto questions
     intents = {
         'greeting': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
         'farewell': ['bye', 'goodbye', 'see you', 'thank you', 'thanks'],
@@ -462,6 +476,11 @@ def understand_user_intent(user_input, conversation_context):
 def generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries):
     """Generate contextual responses based on conversation history and intent."""
     user_input_lower = user_input.lower()
+    
+    # Handle Casto questions FIRST (highest priority)
+    if intent_analysis['intent'] == 'casto_question':
+        # Let the main logic handle Casto questions with knowledge base
+        return None
     
     # Handle greetings
     if intent_analysis['intent'] == 'greeting':
