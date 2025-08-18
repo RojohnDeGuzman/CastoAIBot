@@ -1192,8 +1192,21 @@ IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. O
         person_results_cache = None
         casto_person_results = None
 
-        # Check for Casto family questions first (highest priority)
-        if any(name.lower() in user_input.lower() for name in ["maryles casto", "marc casto"]):
+        # Check for Casto personnel questions FIRST (highest priority - before any AI model calls)
+        casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
+        if any(name.lower() in user_input.lower() for name in casto_personnel_names):
+            logging.info(f"CASTO PERSONNEL QUESTION DETECTED - Using knowledge base only for: {user_input}")
+            # Check knowledge base directly for this person
+            knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+            if knowledge_response:
+                logging.info(f"Found knowledge base entry, returning directly")
+                manage_conversation_context(user_id, user_input, knowledge_response)
+                return jsonify({"response": knowledge_response})
+            else:
+                logging.info(f"No knowledge base entry found for {user_input}")
+        
+        # Check for Casto family questions (secondary priority)
+        elif any(name.lower() in user_input.lower() for name in ["maryles casto", "marc casto"]):
             logging.info(f"CASTO FAMILY QUESTION DETECTED - Using knowledge base only for: {user_input}")
             # Create direct response for Casto family questions
             direct_response = create_casto_direct_response(user_input, knowledge_entries, None)
@@ -1246,7 +1259,16 @@ This information comes directly from the official Casto Travel Philippines websi
             manage_conversation_context(user_id, user_input, direct_response)
             return jsonify({"response": direct_response})
 
-        # Fallback to model
+        # FINAL SAFETY CHECK: Prevent any Casto personnel questions from reaching the AI model
+        casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
+        if any(name.lower() in user_input.lower() for name in casto_personnel_names):
+            logging.info(f"FINAL SAFETY CHECK: Blocking Casto personnel question from AI model: {user_input}")
+            # Return a default response instead of calling the AI model
+            default_response = "I need to check my knowledge base for the most current information about Casto Travel Philippines personnel. Please try asking about specific Casto Travel Philippines staff members."
+            manage_conversation_context(user_id, user_input, default_response)
+            return jsonify({"response": default_response})
+
+        # Fallback to model (only for non-Casto personnel questions)
         import openai
         try:
             client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
