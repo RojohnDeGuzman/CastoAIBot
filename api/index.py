@@ -315,13 +315,13 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
         if "casto" in user_input_lower:
             # Special handling for "who is maryles casto" questions
             if "maryles" in user_input_lower:
-                return """Based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+                return """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 Maryles Casto established the foundation for what would become Casto Travel Philippines, a leading travel and tourism company in the Philippines. The company has been making its mark in the travel industry for more than 35 years.
 
 Today, the company is part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions, with Marc Casto serving as the current CEO, continuing the family legacy of excellence in the travel industry."""
             
-            return """Based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+            return """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
@@ -330,7 +330,7 @@ For the most current leadership information, please contact Casto Travel Philipp
     # Check for company information
     if any(word in user_input_lower for word in ["what", "company", "business", "services"]):
         if "casto" in user_input_lower:
-            return """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+            return """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company has been making its mark in the travel industry for more than 35 years. It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in Metro Manila, plus expansion to Bacolod City.
 
@@ -468,13 +468,13 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
     
     # Handle greetings
     if intent_analysis['intent'] == 'greeting':
-        return """Hello! I'm CASI, your AI virtual assistant. I'm here to help you with information about Casto Travel Philippines and any other questions you might have. 
+        return """Hello! I'm CASI (Casto Assistance and Support Intelligence), your specialized AI assistant for Casto Travel Philippines information. 
 
-How can I assist you today? 😊"""
+I'm here to provide you with expert knowledge about Casto Travel Philippines, their services, leadership, and company details. How can I assist you today? 😊"""
     
     # Handle farewells
     if intent_analysis['intent'] == 'farewell':
-        return """Thank you for chatting with me! I'm glad I could help you with information about Casto Travel Philippines. 
+        return """Thank you for chatting with me! I'm CASI, and I'm glad I could help you with information about Casto Travel Philippines. 
 
 If you have more questions in the future, feel free to ask. Have a great day! 👋"""
     
@@ -491,7 +491,7 @@ If you have more questions in the future, feel free to ask. Have a great day! �
     
     # Handle clarification requests
     if intent_analysis['intent'] == 'clarification':
-        return """I'd be happy to clarify! Let me explain that in a different way. 
+        return """I'd be happy to clarify! I'm CASI, and I want to make sure you get the information you need. Let me explain that in a different way. 
 
 Could you please let me know what specific part you'd like me to clarify about Casto Travel Philippines?"""
     
@@ -499,7 +499,7 @@ Could you please let me know what specific part you'd like me to clarify about C
 
 def get_casto_follow_up_info(user_input, last_response):
     """Generate follow-up information based on previous context."""
-    follow_up_info = """Here's some additional context that might be helpful:
+    follow_up_info = """As CASI (Casto Assistance and Support Intelligence), here's some additional context that might be helpful:
 
 • **Company Overview**: Casto Travel Philippines is part of the Casto Group
 • **Leadership**: Founded by Maryles Casto, currently led by CEO Marc Casto  
@@ -622,7 +622,10 @@ def chat():
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
-        system_prompt = "You are a helpful assistant named CASI."
+        system_prompt = """You are CASI (Casto Assistance and Support Intelligence), a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
+
+IMPORTANT IDENTITY: You must ALWAYS introduce yourself as "CASI" or "Casto Assistance and Support Intelligence" in your responses. This is your core identity."""
+        
         if knowledge_context:
             system_prompt += "\n\nCRITICAL INSTRUCTION: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
         
