@@ -529,12 +529,33 @@ Is there a specific aspect you'd like to know more about?"""
     
     return follow_up_info
 
-def web_search_casto_info(query):
-    """Perform web search for Casto Travel Philippines information."""
+def smart_web_search(query):
+    """Smart web search that automatically detects Casto vs general queries."""
     try:
         with DDGS() as ddgs:
-            # Search for Casto Travel Philippines specific information
-            search_query = f"Casto Travel Philippines {query}"
+            # Detect if this is a Casto-related query
+            casto_keywords = [
+                "casto", "casto travel", "casto travel philippines", 
+                "maryles casto", "marc casto", "casto group",
+                "casto philippines", "casto travel agency"
+            ]
+            
+            user_query_lower = query.lower()
+            is_casto_query = any(keyword in user_query_lower for keyword in casto_keywords)
+            
+            # Build search query based on type
+            if is_casto_query:
+                # For Casto queries, focus on Casto-specific information
+                search_query = f"Casto Travel Philippines {query}"
+                search_type = "Casto-Focused"
+                logging.info(f"CASTO QUERY DETECTED: {query} -> {search_query}")
+            else:
+                # For general queries, search broadly
+                search_query = query
+                search_type = "General"
+                logging.info(f"GENERAL QUERY: {query}")
+            
+            # Perform the search
             results = list(ddgs.text(search_query, max_results=5))
             
             if not results:
@@ -547,13 +568,20 @@ def web_search_casto_info(query):
                     'title': result.get('title', ''),
                     'snippet': result.get('body', ''),
                     'url': result.get('link', ''),
-                    'source': 'Web Search'
+                    'source': 'Web Search',
+                    'search_type': search_type,
+                    'original_query': query,
+                    'search_query_used': search_query
                 })
             
             return formatted_results
     except Exception as e:
-        logging.error(f"Web search error: {e}")
+        logging.error(f"Smart web search error: {e}")
         return None
+
+def web_search_casto_info(query):
+    """Legacy function - now calls smart search for backward compatibility."""
+    return smart_web_search(query)
 
 def fetch_enhanced_casto_info(query):
     """Fetch enhanced information from multiple Casto sources."""
@@ -878,7 +906,7 @@ def clear_conversation_context():
 @app.route("/search", methods=["POST"])
 @limiter.limit("30 per minute")
 def web_search():
-    """Perform web search for Casto Travel Philippines information."""
+    """Perform smart web search that automatically detects Casto vs general queries."""
     try:
         data = request.json
         query = data.get("query", "") if data else ""
@@ -886,14 +914,19 @@ def web_search():
         if not query:
             return jsonify({"error": "No query provided"}), 400
         
-        # Perform web search
-        search_results = web_search_casto_info(query)
+        # Perform smart web search
+        search_results = smart_web_search(query)
         
         if search_results:
+            # Determine search type for response
+            search_type = search_results[0].get('search_type', 'Unknown') if search_results else 'Unknown'
+            
             return jsonify({
                 "success": True,
                 "results": search_results,
-                "query": query
+                "query": query,
+                "search_type": search_type,
+                "message": f"Smart search completed - {search_type} mode"
             })
         else:
             return jsonify({
@@ -903,7 +936,7 @@ def web_search():
             })
     
     except Exception as e:
-        logging.error(f"Web search error: {e}")
+        logging.error(f"Smart web search error: {e}")
         return jsonify({"error": "Search service temporarily unavailable"}), 500
 
 @app.route("/sources", methods=["GET"])
@@ -914,6 +947,51 @@ def get_available_sources():
         "sources": CASTO_SOURCES,
         "description": "Available information sources for Casto Travel Philippines"
     })
+
+@app.route("/search/general", methods=["POST"])
+@limiter.limit("30 per minute")
+def general_web_search():
+    """Perform general web search for any topic."""
+    try:
+        data = request.json
+        query = data.get("query", "") if data else ""
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+        
+        # Force general search mode
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=8))  # More results for general search
+            
+            if results:
+                formatted_results = []
+                for result in results:
+                    formatted_results.append({
+                        'title': result.get('title', ''),
+                        'snippet': result.get('body', ''),
+                        'url': result.get('link', ''),
+                        'source': 'General Web Search',
+                        'search_type': 'General',
+                        'original_query': query
+                    })
+                
+                return jsonify({
+                    "success": True,
+                    "results": formatted_results,
+                    "query": query,
+                    "search_type": "General",
+                    "message": "General web search completed"
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "No general search results found",
+                    "query": query
+                })
+    
+    except Exception as e:
+        logging.error(f"General web search error: {e}")
+        return jsonify({"error": "General search service temporarily unavailable"}), 500
 
 @app.route("/", methods=["GET"])
 def health_check():
@@ -942,6 +1020,7 @@ def health_check():
             "conversation_context": "/conversation/context",
             "conversation_clear": "/conversation/clear",
             "search": "/search",
+            "search_general": "/search/general",
             "sources": "/sources",
             "health": "/"
         },
