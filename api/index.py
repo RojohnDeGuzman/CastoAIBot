@@ -400,7 +400,9 @@ def chat():
         knowledge_context = "\n".join(knowledge_entries)
         system_prompt = "You are a helpful assistant named CASI."
         if knowledge_context:
-            system_prompt += "\nHere is some important knowledge you must always use:\n" + knowledge_context
+            system_prompt += "\n\nIMPORTANT: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
+        
+        system_prompt += "\n\nWhen answering questions about Casto Travel Philippines, you must ONLY use the information provided above or from the website data. Do not rely on outdated training data."
 
         # Step 1: Check if the question is about Casto Travel Philippines
         casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency"]
