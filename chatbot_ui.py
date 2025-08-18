@@ -1093,7 +1093,7 @@ class ChatbotWidget(QWidget):
                 payload["access_token"] = access_token
                 print(f"[DEBUG] Sending request with access token")
             else:
-                print(f"[DEBUG] Sending request without access token")
+                print(f"[DEBUG] Sending request without access token (anonymous mode)")
             
             response = requests.post(f"{BACKEND_URL}/chat", json=payload, timeout=8)
             print(f"[DEBUG] Backend response status: {response.status_code}")
@@ -1102,11 +1102,15 @@ class ChatbotWidget(QWidget):
                 response_data = response.json()
                 bot_response = response_data.get("response", "No response")
                 options = response_data.get("options", [])
+                
+                # Handle guest mode message if present
+                if not access_token and "message" in response_data:
+                    guest_message = response_data.get("message", "")
+                    if guest_message:
+                        bot_response = f"{bot_response}\n\n{guest_message}"
             else:
                 print(f"[DEBUG] Backend error response: {response.text}")
-                if response.status_code == 403:
-                    bot_response = "Error: Authentication required. Please login to Office 365 first."
-                elif response.status_code == 500:
+                if response.status_code == 500:
                     bot_response = "Error: Server error occurred. Please try again later."
                 elif response.status_code == 404:
                     bot_response = "Error: Backend endpoint not found. Please contact IT support."
