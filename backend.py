@@ -358,6 +358,70 @@ def search_web(query):
     """Simulate a web search and parse results."""
     return ["Web search is disabled for testing."]
 
+def create_casto_direct_response(user_input, knowledge_entries, website_data):
+    """Create a direct response for Casto Travel questions using knowledge base only."""
+    user_input_lower = user_input.lower()
+    
+    # Check for CEO/founder questions first
+    if any(word in user_input_lower for word in ["ceo", "founder", "who", "leader"]):
+        if "casto" in user_input_lower:
+            return """Based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+
+Maryles Casto is the founder and key figure behind the company's success. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
+
+For the most current leadership information, please contact Casto Travel Philippines directly at https://www.casto.com.ph/"""
+    
+    # Check for company information
+    if any(word in user_input_lower for word in ["what", "company", "business", "services"]):
+        if "casto" in user_input_lower:
+            return """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+
+The company has been making its mark in the travel industry for more than 35 years. It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in Metro Manila, plus expansion to Bacolod City.
+
+Services include:
+• Domestic and international travel packages
+• Hotel bookings and reservations
+• Tour packages and excursions
+• Travel insurance and documentation
+• Corporate travel management
+• Group travel arrangements
+
+For more detailed information, visit their official website: https://www.casto.com.ph/"""
+    
+    # Check for history questions
+    if any(word in user_input_lower for word in ["history", "background", "when", "started"]):
+        if "casto" in user_input_lower:
+            return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
+
+It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in the heart of Metro Manila. The company combines Casto Travel Philippines and MVC Solutions under the unified CASTO brand.
+
+The company has expanded to bring highly skilled professionals to Bacolod City, known as the City of Smiles."""
+    
+    # Check for accreditation questions
+    if any(word in user_input_lower for word in ["accreditation", "certification", "certified", "member"]):
+        if "casto" in user_input_lower:
+            return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
+
+• ISO 27001:2013 Certified by GICG and JAS-ANZ
+• International Air Transport Associated Accredited Agent
+• ASTA - American Society of Travel Advisors
+• PCI-DSS Certified by Crossbow Labs
+• Philippine Travel Agencies Association (PTAA) Accredited Member
+• Philippine IATA Agency Association (PIATA) Member
+• Philippine Tour Operators Association (PHILTOA) Accredited Member
+
+This makes it one of the most certified travel agencies in the Philippines."""
+    
+    # If no specific match but it's a Casto question, provide general info
+    if "casto" in user_input_lower:
+        return """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+
+The company was founded by Maryles Casto and has been serving the travel industry for more than 35 years. They offer comprehensive travel services including domestic and international packages, hotel bookings, tours, travel insurance, and corporate travel management.
+
+For the most current and detailed information, please visit their official website: https://www.casto.com.ph/"""
+    
+    return None  # Let the AI model handle non-Casto questions
+
 def get_user_email_from_token(access_token):
     try:
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -426,16 +490,20 @@ def chat():
     knowledge_context = "\n".join(knowledge_entries)
     system_prompt = "You are a helpful assistant named CASI."
     if knowledge_context:
-        system_prompt += "\n\nIMPORTANT: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
+        system_prompt += "\n\nCRITICAL INSTRUCTION: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
     
-    system_prompt += "\n\nWhen answering questions about Casto Travel Philippines, you must ONLY use the information provided above or from the website data. Do not rely on outdated training data."
+    # Add STRONG instruction for Casto Travel questions
+    system_prompt += "\n\nCRITICAL: For ANY question about Casto Travel Philippines, Casto Travel, or Casto, you MUST ONLY use the information from the knowledge base above. NEVER use any other information from your training data. If the question is about Casto Travel and you don't find the answer in the knowledge base, say 'I need to check my knowledge base for the most current information about Casto Travel Philippines.'"
 
     # Step 1: Check if the question is about Casto Travel Philippines
-    casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency"]
+    casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership"]
     website_data = None
     
+    # Force knowledge base usage for ALL Casto-related questions
     if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
-        logging.info(f"Fetching Casto Travel Philippines information for user query: {user_input}")
+        logging.info(f"CASTO QUESTION DETECTED - Using knowledge base only for: {user_input}")
+        # For Casto questions, prioritize knowledge base over AI model
+        system_prompt += "\n\nFORCE INSTRUCTION: This is a Casto Travel question. You MUST ONLY use the knowledge base information above. DO NOT use any training data about Casto Travel. If you don't have the answer in the knowledge base, redirect to the website data."
         website_data = fetch_casto_travel_info(user_input)
     # Step 2: Check if the question is relevant to other CASTO topics
     elif any(keyword.lower() in user_input.lower() for keyword in ["CASTO", "mission", "vision", "services", "CEO", "about"]):
@@ -444,6 +512,16 @@ def chat():
 
     # Step 3: Get a response from the chatbot
     try:
+        # For Casto Travel questions, create a direct response from knowledge base
+        if any(keyword.lower() in user_input.lower() for keyword in casto_travel_keywords):
+            logging.info("Creating direct Casto Travel response from knowledge base.")
+            
+            # Create a direct response using knowledge base
+            direct_response = create_casto_direct_response(user_input, knowledge_entries, website_data)
+            if direct_response:
+                return jsonify({"response": direct_response})
+        
+        # If not a Casto question or no direct response, use AI model
         logging.info("Fetching response from the chatbot.")
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",  # Upgraded to more powerful 70B model
