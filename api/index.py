@@ -52,10 +52,11 @@ CASTO_SOURCES = [
 website_cache = {}
 CACHE_DURATION = 300  # 5 minutes
 
-# Conversation memory and context management (simplified for serverless)
+# Conversation memory and context management (enhanced for persistent focus)
 conversation_memory = {}
-CONVERSATION_TIMEOUT = 1800  # 30 minutes
-MAX_CONVERSATION_HISTORY = 5  # Keep last 5 exchanges for serverless
+CONVERSATION_TIMEOUT = 3600  # Increased to 1 hour for better persistence
+MAX_CONVERSATION_HISTORY = 15  # Increased to 15 exchanges for better context
+ACTIVE_ISSUE_TIMEOUT = 7200  # 2 hours for active issues to remain open
 
 # HTTP session for connection pooling
 session = requests.Session()
@@ -481,22 +482,56 @@ def manage_conversation_context(user_id, user_input, response):
             'topics': set(),
             'intent': None,
             'current_focus': None,
+            'current_subject': None,  # Track current subject being discussed
+            'subject_start_time': None,  # When current subject started
+            'resolution_status': 'ongoing',  # ongoing, resolved, abandoned
             'conversation_depth': 0,
             'related_questions': [],
-            'user_preferences': set()
+            'user_preferences': set(),
+            'context_chain': []  # Chain of related exchanges
         }
     
     conv = conversation_memory[user_id]
     
-    # Clean old conversations
+    # Clean old conversations but preserve active subjects
     if current_time - conv['last_updated'] > CONVERSATION_TIMEOUT:
-        conv['history'] = []
-        conv['topics'] = set()
-        conv['intent'] = None
-        conv['current_focus'] = None
-        conv['conversation_depth'] = 0
-        conv['related_questions'] = []
-        conv['user_preferences'] = set()
+        # Only clear if no active subject or subject is very old
+        if not conv.get('current_subject') or \
+           (conv.get('subject_start_time') and 
+            current_time - conv['subject_start_time'] > ACTIVE_ISSUE_TIMEOUT):
+            conv['history'] = []
+            conv['topics'] = set()
+            conv['intent'] = None
+            conv['current_focus'] = None
+            conv['current_subject'] = None
+            conv['subject_start_time'] = None
+            conv['resolution_status'] = 'ongoing'
+            conv['conversation_depth'] = 0
+            conv['related_questions'] = []
+            conv['user_preferences'] = set()
+            conv['context_chain'] = []
+    
+    # Extract current subject from input
+    current_subject = extract_subject_from_input(user_input, conv)
+    
+    # Update subject tracking
+    if current_subject != conv.get('current_subject'):
+        # New subject started
+        conv['current_subject'] = current_subject
+        conv['subject_start_time'] = current_time
+        conv['resolution_status'] = 'ongoing'
+        conv['context_chain'] = []
+    else:
+        # Same subject continues
+        conv['context_chain'].append({
+            'input': user_input,
+            'response': response,
+            'timestamp': current_time
+        })
+    
+    # Check if issue is resolved
+    if is_issue_resolved(user_input, response, conv):
+        conv['resolution_status'] = 'resolved'
     
     # Add current exchange to history with enhanced metadata
     exchange_data = {
@@ -505,14 +540,16 @@ def manage_conversation_context(user_id, user_input, response):
         'timestamp': current_time,
         'intent': analyze_exchange_intent(user_input),
         'topics': extract_topics_from_text(user_input),
-        'entities': extract_entities_from_text(user_input)
+        'entities': extract_entities_from_text(user_input),
+        'subject': current_subject,
+        'resolution_status': conv['resolution_status']
     }
     
     conv['history'].append(exchange_data)
     
-    # Keep more history for better context (increased from 5 to 10)
-    if len(conv['history']) > 10:
-        conv['history'] = conv['history'][-10:]
+    # Keep more history for better context (increased to 15)
+    if len(conv['history']) > MAX_CONVERSATION_HISTORY:
+        conv['history'] = conv['history'][-MAX_CONVERSATION_HISTORY:]
     
     # Update last activity
     conv['last_updated'] = current_time
@@ -607,6 +644,45 @@ def extract_entities_from_text(text):
     
     return entities
 
+def extract_subject_from_input(user_input, conversation_context):
+    """Extract the main subject/topic from user input."""
+    # If we have an ongoing subject, check if this is related
+    if conversation_context and conversation_context.get('current_subject'):
+        if should_continue_subject(user_input, conversation_context):
+            return conversation_context['current_subject']
+    
+    # Extract new subject from input
+    user_input_lower = user_input.lower()
+    
+    # Travel-related subjects
+    travel_subjects = [
+        "travel planning", "vacation", "trip", "booking", "hotel", "flight",
+        "tour package", "travel insurance", "visa", "passport", "destination",
+        "itinerary", "budget", "accommodation", "transportation"
+    ]
+    
+    # Casto-related subjects
+    casto_subjects = [
+        "casto travel", "company", "services", "personnel", "leadership",
+        "about casto", "casto history", "casto team", "casto offerings"
+    ]
+    
+    # Check for specific subjects
+    for subject in travel_subjects + casto_subjects:
+        if subject in user_input_lower:
+            return subject
+    
+    # Check for question words that indicate a new subject
+    question_words = ["what", "how", "when", "where", "why", "who"]
+    if any(word in user_input_lower for word in question_words):
+        # Extract the main topic after the question word
+        words = user_input_lower.split()
+        for i, word in enumerate(words):
+            if word in question_words and i + 1 < len(words):
+                return " ".join(words[i+1:i+3])  # Take next 2 words as subject
+    
+    return "general inquiry"
+
 def determine_conversation_focus(history):
     """Determine the main focus of the conversation based on history."""
     if not history:
@@ -686,6 +762,52 @@ def generate_follow_up_suggestions(user_input, conversation_context, current_res
     current_focus = conversation_context.get('current_focus', 'general')
     recent_topics = conversation_context.get('topics', set())
     user_preferences = conversation_context.get('user_preferences', set())
+    current_subject = conversation_context.get('current_subject', 'general inquiry')
+    resolution_status = conversation_context.get('resolution_status', 'ongoing')
+    
+    # Subject-specific follow-up suggestions
+    if current_subject and current_subject != 'general inquiry':
+        if 'travel planning' in current_subject.lower():
+            if resolution_status == 'ongoing':
+                suggestions.extend([
+                    "What's your budget for this trip?",
+                    "How many people will be traveling?",
+                    "Do you have any specific dates in mind?",
+                    "What type of accommodation do you prefer?"
+                ])
+            else:
+                suggestions.extend([
+                    "Would you like to start planning another trip?",
+                    "Can I help you with travel insurance for your upcoming trip?",
+                    "Do you need help with visa applications?"
+                ])
+        
+        elif 'hotel' in current_subject.lower():
+            if resolution_status == 'ongoing':
+                suggestions.extend([
+                    "What's your preferred hotel category (budget, mid-range, luxury)?",
+                    "Do you need airport transfer services?",
+                    "Would you like to see nearby attractions?",
+                    "What amenities are important to you?"
+                ])
+        
+        elif 'flight' in current_subject.lower():
+            if resolution_status == 'ongoing':
+                suggestions.extend([
+                    "What's your preferred airline?",
+                    "Do you need flexible booking options?",
+                    "Would you like to add travel insurance?",
+                    "Do you need help with seat selection?"
+                ])
+        
+        elif 'casto travel' in current_subject.lower():
+            if resolution_status == 'ongoing':
+                suggestions.extend([
+                    "What specific services are you interested in?",
+                    "Would you like to know about Casto's accreditations?",
+                    "Can I tell you about Casto's leadership team?",
+                    "What makes Casto Travel different from competitors?"
+                ])
     
     # Casto Travel Philippines focused suggestions
     if 'casto' in recent_topics or 'travel' in recent_topics:
@@ -735,6 +857,20 @@ def generate_follow_up_suggestions(user_input, conversation_context, current_res
     
     if 'business_travel' in user_preferences:
         suggestions.append("What corporate travel management services are offered?")
+    
+    # Resolution-based suggestions
+    if resolution_status == 'resolved':
+        suggestions.extend([
+            "Is there anything else I can help you with?",
+            "Would you like to explore other Casto Travel services?",
+            "Can I assist you with a different travel inquiry?"
+        ])
+    elif resolution_status == 'ongoing':
+        suggestions.extend([
+            "Do you need more details about this?",
+            "Would you like me to clarify anything?",
+            "Is there a specific aspect you'd like me to focus on?"
+        ])
     
     # Default suggestions if no specific context
     if not suggestions:
@@ -1687,8 +1823,12 @@ def chat():
             conversation_depth = conversation_context.get('conversation_depth', 0)
             related_questions = conversation_context.get('related_questions', [])
             user_preferences = conversation_context.get('user_preferences', set())
+            current_subject = conversation_context.get('current_subject', 'general inquiry')
+            resolution_status = conversation_context.get('resolution_status', 'ongoing')
             
             context_summary = f"\n\nCONVERSATION CONTEXT:"
+            context_summary += f"\n- Current Subject: {current_subject}"
+            context_summary += f"\n- Resolution Status: {resolution_status}"
             context_summary += f"\n- Current Focus: {current_focus}"
             context_summary += f"\n- Conversation Depth: {conversation_depth} exchanges"
             context_summary += f"\n- Recent Topics: {', '.join(list(conversation_context['topics'])[:5])}"
@@ -1701,7 +1841,19 @@ def chat():
             
             system_prompt += context_summary
             
-            system_prompt += "\n\nIMPORTANT: Use this conversation context to provide more relevant and connected responses. If the user asks follow-up questions, refer to previous context when appropriate. Build upon previous information and provide complete, contextual answers."
+            system_prompt += f"""
+
+IMPORTANT CONVERSATION CONTINUITY INSTRUCTIONS:
+1. **MAINTAIN SUBJECT FOCUS**: The user is currently discussing: "{current_subject}"
+2. **RESOLUTION STATUS**: This subject is currently: {resolution_status}
+3. **CONTEXT AWARENESS**: Use this conversation context to provide more relevant and connected responses
+4. **FOLLOW-UP HANDLING**: If the user asks follow-up questions, refer to previous context when appropriate
+5. **SUBJECT PERSISTENCE**: Stay focused on the current subject until it's clearly resolved
+6. **CONTEXTUAL ANSWERS**: Build upon previous information and provide complete, contextual answers
+7. **AVOID RESETTING**: Don't start over or forget what we were discussing - maintain continuity
+8. **PROGRESSIVE HELP**: Each response should move the conversation forward toward resolution
+
+If the user asks a question that seems unrelated, first check if it's actually a follow-up to the current subject before switching topics."""
 
         # Step 1: Check if the question is about Casto Travel Philippines or Casto family
         casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
@@ -1860,7 +2012,15 @@ This information comes directly from the official Casto Travel Philippines websi
         if website_data and "No relevant information found" not in website_data:
             combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
         combined_response = make_links_clickable(combined_response)
+        
+        # Manage conversation context with enhanced resolution detection
         manage_conversation_context(user_id, user_input, combined_response)
+        
+        # Update conversation resolution status
+        conversation_context = conversation_memory.get(user_id, None)
+        if conversation_context:
+            conversation_context = update_conversation_resolution(user_input, combined_response, conversation_context)
+            conversation_memory[user_id] = conversation_context
         
         # Generate contextual follow-up suggestions
         follow_up_suggestions = generate_follow_up_suggestions(user_input, conversation_context, combined_response)
@@ -1869,6 +2029,8 @@ This information comes directly from the official Casto Travel Philippines websi
             "response": combined_response,
             "follow_up_suggestions": follow_up_suggestions,
             "conversation_context": {
+                "current_subject": conversation_context.get('current_subject', 'general inquiry') if conversation_context else 'general inquiry',
+                "resolution_status": conversation_context.get('resolution_status', 'ongoing') if conversation_context else 'ongoing',
                 "current_focus": conversation_context.get('current_focus', 'general') if conversation_context else 'general',
                 "conversation_depth": conversation_context.get('conversation_depth', 0) if conversation_context else 0,
                 "recent_topics": list(conversation_context.get('topics', set()))[:5] if conversation_context else []
@@ -2124,3 +2286,114 @@ app.debug = False
 # Export the Flask app for Vercel
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=9000)
+
+def detect_conversation_resolution(user_input, response, conversation_context):
+    """Enhanced detection of when a conversation subject is resolved."""
+    user_input_lower = user_input.lower()
+    response_lower = response.lower()
+    
+    # Strong resolution indicators
+    strong_resolution_phrases = [
+        "thank you", "thanks", "that helps", "got it", "understood", 
+        "perfect", "great", "excellent", "that's what i needed",
+        "solved", "resolved", "figured out", "clear now", "got my answer",
+        "that answers my question", "exactly what i was looking for",
+        "that's perfect", "that's all i need", "that covers it"
+    ]
+    
+    # Moderate resolution indicators
+    moderate_resolution_phrases = [
+        "okay", "ok", "alright", "good", "fine", "sure", "yes",
+        "i see", "i understand", "gotcha", "makes sense"
+    ]
+    
+    # Check for strong resolution
+    if any(phrase in user_input_lower for phrase in strong_resolution_phrases):
+        return "resolved"
+    
+    # Check for moderate resolution with context
+    if any(phrase in user_input_lower for phrase in moderate_resolution_phrases):
+        # If this is a short response after a detailed answer, likely resolved
+        if len(user_input.split()) <= 3 and len(response) > 100:
+            return "resolved"
+    
+    # Check if response contains complete information
+    if len(response) > 300 and any(word in response_lower for word in [
+        "complete", "finished", "all set", "ready", "everything you need",
+        "full information", "comprehensive details", "complete answer"
+    ]):
+        return "resolved"
+    
+    # Check for new topic indicators (suggesting previous topic is resolved)
+    new_topic_indicators = [
+        "what about", "how about", "can you tell me about", "i want to know about",
+        "different question", "another thing", "by the way", "also"
+    ]
+    
+    if any(phrase in user_input_lower for phrase in new_topic_indicators):
+        return "resolved"
+    
+    return "ongoing"
+
+def update_conversation_resolution(user_input, response, conversation_context):
+    """Update conversation resolution status based on user input and response."""
+    if not conversation_context:
+        return conversation_context
+    
+    resolution_status = detect_conversation_resolution(user_input, response, conversation_context)
+    
+    if resolution_status == "resolved":
+        conversation_context['resolution_status'] = 'resolved'
+        # Mark the subject as resolved but keep it for context
+        conversation_context['subject_resolved_at'] = time.time()
+    
+    return conversation_context
+
+def is_issue_resolved(user_input, response, conversation_context):
+    """Determine if the current issue has been resolved."""
+    user_input_lower = user_input.lower()
+    response_lower = response.lower()
+    
+    # Resolution indicators
+    resolution_phrases = [
+        "thank you", "thanks", "that helps", "got it", "understood", 
+        "perfect", "great", "excellent", "that's what i needed",
+        "solved", "resolved", "figured out", "clear now", "got my answer"
+    ]
+    
+    # Check if user indicates satisfaction
+    if any(phrase in user_input_lower for phrase in resolution_phrases):
+        return True
+    
+    # Check if response contains complete information
+    if len(response) > 200 and any(word in response_lower for word in ["complete", "finished", "all set", "ready"]):
+        return True
+    
+    return False
+
+def should_continue_subject(user_input, conversation_context):
+    """Determine if we should continue with the current subject."""
+    if not conversation_context or not conversation_context.get('current_subject'):
+        return False
+    
+    # Check if user is asking for more details about current subject
+    current_subject = conversation_context['current_subject'].lower()
+    user_input_lower = user_input.lower()
+    
+    # Continue if user asks for more details, clarification, or related questions
+    continuation_indicators = [
+        "more", "tell me more", "explain", "elaborate", "what about",
+        "how about", "can you", "could you", "please", "also",
+        "additionally", "furthermore", "besides", "other", "different"
+    ]
+    
+    # Check if input is related to current subject
+    subject_keywords = current_subject.split()
+    if any(keyword in user_input_lower for keyword in subject_keywords):
+        return True
+    
+    # Check for continuation phrases
+    if any(phrase in user_input_lower for phrase in continuation_indicators):
+        return True
+    
+    return False
