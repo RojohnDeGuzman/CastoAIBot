@@ -1321,7 +1321,7 @@ This information comes directly from the official Casto Travel Philippines websi
         # If not a Casto question or no direct response, use AI model
         logging.info("Fetching response from the chatbot.")
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",  # Upgraded to more powerful 70B model
+            model="Mixtral-8x7b-32768",  # Upgraded to more powerful 70B model
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}

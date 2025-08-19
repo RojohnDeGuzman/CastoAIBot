@@ -530,7 +530,7 @@ def manage_conversation_context(user_id, user_input, response):
         })
     
     # Check if issue is resolved
-    if is_issue_resolved(user_input, response, conv):
+    if detect_conversation_resolution(user_input, response, conv) == "resolved":
         conv['resolution_status'] = 'resolved'
     
     # Add current exchange to history with enhanced metadata
@@ -1788,8 +1788,10 @@ def chat():
         # Try to generate contextual response first
         contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
         if contextual_response:
-            # Manage conversation context
-            manage_conversation_context(user_id, user_input, contextual_response)
+            # Manage conversation context with enhanced tracking
+            updated_context = manage_conversation_context(user_id, user_input, contextual_response)
+            # Update the conversation memory with the enhanced context
+            conversation_memory[user_id] = updated_context
             return jsonify({"response": contextual_response})
 
         # Combine knowledge into a string
@@ -1826,6 +1828,13 @@ def chat():
             current_subject = conversation_context.get('current_subject', 'general inquiry')
             resolution_status = conversation_context.get('resolution_status', 'ongoing')
             
+            # Debug logging for conversation context
+            logging.info(f"CONVERSATION CONTEXT DEBUG:")
+            logging.info(f"- Current Subject: {current_subject}")
+            logging.info(f"- Resolution Status: {resolution_status}")
+            logging.info(f"- Conversation Depth: {conversation_depth}")
+            logging.info(f"- Recent Topics: {list(conversation_context['topics'])[:5]}")
+            
             context_summary = f"\n\nCONVERSATION CONTEXT:"
             context_summary += f"\n- Current Subject: {current_subject}"
             context_summary += f"\n- Resolution Status: {resolution_status}"
@@ -1853,7 +1862,23 @@ IMPORTANT CONVERSATION CONTINUITY INSTRUCTIONS:
 7. **AVOID RESETTING**: Don't start over or forget what we were discussing - maintain continuity
 8. **PROGRESSIVE HELP**: Each response should move the conversation forward toward resolution
 
-If the user asks a question that seems unrelated, first check if it's actually a follow-up to the current subject before switching topics."""
+**CRITICAL**: If the user asks a question that seems unrelated, first check if it's actually a follow-up to the current subject before switching topics. The current subject is: "{current_subject}"."""
+
+        # Add specific instructions for IT troubleshooting conversations
+        if conversation_context and is_it_troubleshooting_conversation(user_input, conversation_context):
+            system_prompt += f"""
+
+**IT TROUBLESHOOTING CONTEXT - CRITICAL INSTRUCTIONS:**
+You are currently helping with a technical issue: "{current_subject}"
+- **STAY FOCUSED** on solving this technical problem
+- **BUILD UPON** previous troubleshooting steps
+- **ASK RELEVANT QUESTIONS** to gather more information
+- **PROVIDE STEP-BY-STEP** guidance
+- **DON'T SWITCH TOPICS** until the technical issue is resolved
+- **REFER BACK** to previous information when appropriate
+- **BE TECHNICAL** and specific in your responses
+
+This is a technical support conversation - maintain focus and provide progressive troubleshooting help."""
 
         # Step 1: Check if the question is about Casto Travel Philippines or Casto family
         casto_travel_keywords = ["casto travel", "casto travel philippines", "casto philippines", "casto travel services", "casto tourism", "casto travel agency", "casto", "ceo", "founder", "leadership", "maryles casto", "marc casto"]
@@ -2019,8 +2044,17 @@ This information comes directly from the official Casto Travel Philippines websi
         # Update conversation resolution status
         conversation_context = conversation_memory.get(user_id, None)
         if conversation_context:
+            # Maintain IT troubleshooting context if applicable
+            conversation_context = maintain_it_troubleshooting_context(user_input, conversation_context)
             conversation_context = update_conversation_resolution(user_input, combined_response, conversation_context)
             conversation_memory[user_id] = conversation_context
+            
+            # Debug logging for final context state
+            logging.info(f"FINAL CONVERSATION CONTEXT:")
+            logging.info(f"- Current Subject: {conversation_context.get('current_subject', 'None')}")
+            logging.info(f"- Resolution Status: {conversation_context.get('resolution_status', 'None')}")
+            logging.info(f"- Conversation Depth: {conversation_context.get('conversation_depth', 0)}")
+            logging.info(f"- Is IT Troubleshooting: {is_it_troubleshooting_conversation(user_input, conversation_context)}")
         
         # Generate contextual follow-up suggestions
         follow_up_suggestions = generate_follow_up_suggestions(user_input, conversation_context, combined_response)
@@ -2349,27 +2383,7 @@ def update_conversation_resolution(user_input, response, conversation_context):
     
     return conversation_context
 
-def is_issue_resolved(user_input, response, conversation_context):
-    """Determine if the current issue has been resolved."""
-    user_input_lower = user_input.lower()
-    response_lower = response.lower()
-    
-    # Resolution indicators
-    resolution_phrases = [
-        "thank you", "thanks", "that helps", "got it", "understood", 
-        "perfect", "great", "excellent", "that's what i needed",
-        "solved", "resolved", "figured out", "clear now", "got my answer"
-    ]
-    
-    # Check if user indicates satisfaction
-    if any(phrase in user_input_lower for phrase in resolution_phrases):
-        return True
-    
-    # Check if response contains complete information
-    if len(response) > 200 and any(word in response_lower for word in ["complete", "finished", "all set", "ready"]):
-        return True
-    
-    return False
+
 
 def should_continue_subject(user_input, conversation_context):
     """Determine if we should continue with the current subject."""
@@ -2397,3 +2411,51 @@ def should_continue_subject(user_input, conversation_context):
         return True
     
     return False
+
+def is_it_troubleshooting_conversation(user_input, conversation_context):
+    """Check if this is an IT troubleshooting conversation that should maintain context."""
+    if not conversation_context:
+        return False
+    
+    current_subject = conversation_context.get('current_subject', '').lower()
+    user_input_lower = user_input.lower()
+    
+    # IT troubleshooting subjects
+    it_subjects = [
+        'mouse', 'keyboard', 'computer', 'internet', 'connection',
+        'software', 'hardware', 'troubleshooting', 'problem', 'issue',
+        'not working', 'broken', 'error', 'slow', 'freeze'
+    ]
+    
+    # Check if current subject is IT-related
+    if any(subject in current_subject for subject in it_subjects):
+        return True
+    
+    # Check if user input is IT-related
+    if any(subject in user_input_lower for subject in it_subjects):
+        return True
+    
+    # Check if this is a follow-up to IT troubleshooting
+    if conversation_context.get('history'):
+        recent_exchanges = conversation_context['history'][-3:]
+        for exchange in recent_exchanges:
+            if any(subject in exchange.get('user_input', '').lower() for subject in it_subjects):
+                return True
+    
+    return False
+
+def maintain_it_troubleshooting_context(user_input, conversation_context):
+    """Ensure IT troubleshooting conversations maintain proper context."""
+    if not is_it_troubleshooting_conversation(user_input, conversation_context):
+        return conversation_context
+    
+    # Force the subject to remain IT troubleshooting if it's related
+    if conversation_context.get('current_subject'):
+        current_subject = conversation_context['current_subject'].lower()
+        if any(word in current_subject for word in ['mouse', 'keyboard', 'computer', 'troubleshooting']):
+            # Keep the IT troubleshooting context
+            conversation_context['current_subject'] = current_subject
+            conversation_context['resolution_status'] = 'ongoing'
+            logging.info(f"Maintaining IT troubleshooting context: {current_subject}")
+    
+    return conversation_context
