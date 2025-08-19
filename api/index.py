@@ -1843,7 +1843,7 @@ This information comes directly from the official Casto Travel Philippines websi
 
         logging.info("Fetching response from Groq.")
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="mixtral-8x7b-32768",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
