@@ -991,6 +991,15 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
     """Generate contextual responses based on conversation history and intent."""
     user_input_lower = user_input.lower()
     
+    # CRITICAL: Check if this is a follow-up to an ongoing conversation
+    if conversation_context and conversation_context.get('current_subject') and conversation_context.get('current_subject') != 'general inquiry':
+        current_subject = conversation_context['current_subject']
+        logging.info(f"GENERATING CONTEXTUAL RESPONSE for ongoing conversation about: {current_subject}")
+        
+        # Handle follow-up questions for ongoing conversations
+        if should_continue_subject(user_input, conversation_context):
+            return generate_progressive_contextual_response(user_input, conversation_context, current_subject)
+    
     # Handle Casto questions FIRST (highest priority)
     if intent_analysis['intent'] == 'casto_question':
         # Let the main logic handle Casto questions with knowledge base
@@ -1023,25 +1032,8 @@ I'm here to provide you with expert knowledge about Casto Travel Philippines, th
 
 If you have more questions in the future, feel free to ask. Have a great day! 👋"""
     
-    # Handle follow-up questions with context
-    if intent_analysis['is_follow_up'] and conversation_context and conversation_context['history']:
-        last_exchange = conversation_context['history'][-1]
-        last_response = last_exchange['response']
-        
-        # Provide contextual follow-up information
-        if 'casto' in user_input_lower:
-            return f"""Based on our previous conversation, let me provide you with additional information about Casto Travel Philippines.
-
-{get_casto_follow_up_info(user_input_lower, last_response)}"""
-    
-    # Handle clarification requests
-    if intent_analysis['intent'] == 'clarification':
-        return """I'd be happy to clarify! I'm CASI, and I want to make sure you get the information you need. Let me explain that in a different way. 
-
-Could you please let me know what specific part you'd like me to clarify about Casto Travel Philippines?"""
-    
     # Handle IT troubleshooting questions (high priority for context)
-    if any(word in user_input_lower for word in ["internet", "slow", "connection", "vpn", "password", "computer", "troubleshoot", "problem", "issue", "help"]):
+    if any(word in user_input_lower for word in ["internet", "slow", "connection", "vpn", "password", "computer", "troubleshoot", "problem", "issue", "help", "mouse", "keyboard", "not working"]):
         return handle_it_troubleshooting(user_input, conversation_context)
     
     # Handle CASI identity questions (highest priority)
@@ -1068,6 +1060,113 @@ Could you please let me know what specific part you'd like me to clarify about C
     
     logging.info(f"NO CONTEXTUAL RESPONSE FOR: {user_input} - will use AI model")
     return None  # Let the main logic handle other cases
+
+def generate_progressive_contextual_response(user_input, conversation_context, current_subject):
+    """Generate progressive contextual responses for ongoing conversations."""
+    user_input_lower = user_input.lower()
+    
+    # Get recent conversation history
+    recent_history = conversation_context.get('history', [])[-3:]  # Last 3 exchanges
+    if not recent_history:
+        return None
+    
+    # Analyze the current conversation state
+    last_exchange = recent_history[-1]
+    last_response = last_exchange.get('response', '')
+    last_user_input = last_exchange.get('user_input', '')
+    
+    logging.info(f"Generating progressive response for subject: {current_subject}")
+    logging.info(f"Last user input: {last_user_input}")
+    logging.info(f"Last response: {last_response[:100]}...")
+    
+    # Handle IT troubleshooting progressive responses
+    if 'troubleshooting' in current_subject.lower() or any(word in current_subject.lower() for word in ['mouse', 'keyboard', 'computer', 'internet', 'connection']):
+        return generate_it_troubleshooting_progressive_response(user_input, conversation_context, current_subject, recent_history)
+    
+    # Handle Casto Travel progressive responses
+    elif 'casto' in current_subject.lower() or 'travel' in current_subject.lower():
+        return generate_casto_progressive_response(user_input, conversation_context, current_subject, recent_history)
+    
+    # Handle general progressive responses
+    else:
+        return generate_general_progressive_response(user_input, conversation_context, current_subject, recent_history)
+
+def generate_it_troubleshooting_progressive_response(user_input, conversation_context, current_subject, recent_history):
+    """Generate progressive IT troubleshooting responses."""
+    user_input_lower = user_input.lower()
+    
+    # Extract what we know so far
+    known_info = []
+    for exchange in recent_history:
+        if exchange.get('user_input'):
+            known_info.append(exchange['user_input'])
+    
+    # Build progressive response based on what we know
+    if 'mouse' in current_subject.lower():
+        if 'wired' in user_input_lower:
+            return """Great! Now I know your mouse is wired. Let's continue troubleshooting your mouse issue.
+
+Since you mentioned it's wired, let's check a few things:
+
+1. **USB Connection**: Is the USB cable properly connected to your computer?
+2. **USB Port**: Try unplugging and plugging it into a different USB port
+3. **Driver Check**: Have you tried restarting your computer to refresh the drivers?
+
+What happens when you try these steps? Does the mouse respond at all, or is it completely unresponsive?"""
+        
+        elif any(word in user_input_lower for word in ['slow', 'cursor', 'movement']):
+            return """I see the issue now - your wired mouse cursor is moving slowly. This is a common problem with several possible solutions:
+
+**Immediate fixes to try:**
+1. **Mouse Settings**: Check your mouse sensitivity in Windows Settings > Devices > Mouse
+2. **Surface Check**: Try moving the mouse on a different surface
+3. **USB Port**: Switch to a different USB port
+4. **Restart**: Restart your computer to refresh drivers
+
+**Advanced troubleshooting:**
+- Check if there are any mouse driver updates
+- Try the mouse on another computer to isolate the issue
+
+Which of these would you like to try first, or have you already tried some of them?"""
+    
+    elif 'internet' in current_subject.lower() or 'connection' in current_subject.lower():
+        if any(word in user_input_lower for word in ['slow', 'speed']):
+            return """Now I understand - you're experiencing slow internet speeds. Let's continue troubleshooting this step by step.
+
+**Based on our conversation, let's check:**
+1. **Router Status**: Have you tried restarting your router?
+2. **Device Check**: Is the slow speed affecting all your devices or just one?
+3. **Speed Test**: Can you run a speed test on speedtest.net?
+
+**Next steps:**
+- What type of internet connection do you have? (Fiber, Cable, DSL?)
+- When did this slow speed issue start?
+- Are you experiencing this at all times or just certain times?
+
+This will help me give you more specific solutions for your internet speed issue."""
+    
+    # Default progressive response
+    return f"""I'm continuing to help you with your {current_subject} issue. 
+
+Based on what you've told me so far, let me ask a few more questions to better understand your situation:
+
+1. **What have you already tried** to fix this issue?
+2. **When did this problem start** occurring?
+3. **Are there any error messages** or specific symptoms you're seeing?
+
+The more details you can provide, the better I can help you resolve this {current_subject} problem step by step."""
+
+def generate_casto_progressive_response(user_input, conversation_context, current_subject, recent_history):
+    """Generate progressive Casto Travel responses."""
+    return f"""I'm continuing our discussion about {current_subject}. 
+
+Based on what we've covered so far, what specific aspect would you like me to elaborate on? I want to make sure you get all the information you need about Casto Travel Philippines."""
+
+def generate_general_progressive_response(user_input, conversation_context, current_subject, recent_history):
+    """Generate progressive responses for general conversations."""
+    return f"""I'm continuing our conversation about {current_subject}. 
+
+To provide you with the most helpful information, could you tell me more about what specific aspect you'd like to explore or what questions you still have?"""
 
 def handle_it_troubleshooting(user_input, conversation_context):
     """Handle IT troubleshooting questions with context awareness."""
@@ -1791,7 +1890,12 @@ def chat():
             logging.info(f"ONGOING CONVERSATION DETECTED: Subject: {current_subject}")
             
             # Check if user input is related to current subject
-            if should_continue_subject(user_input, conversation_context):
+            should_continue = should_continue_subject(user_input, conversation_context)
+            logging.info(f"SHOULD CONTINUE SUBJECT: {should_continue}")
+            logging.info(f"USER INPUT: '{user_input}'")
+            logging.info(f"CURRENT SUBJECT: '{current_subject}'")
+            
+            if should_continue:
                 logging.info(f"FOLLOW-UP QUESTION DETECTED: Maintaining context for '{current_subject}'")
                 # Force the conversation to continue with the current subject
                 conversation_context['resolution_status'] = 'ongoing'
@@ -1802,11 +1906,14 @@ def chat():
         # Try to generate contextual response first
         contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
         if contextual_response:
+            logging.info(f"CONTEXTUAL RESPONSE GENERATED: {contextual_response[:100]}...")
             # Manage conversation context with enhanced tracking
             updated_context = manage_conversation_context(user_id, user_input, contextual_response)
             # Update the conversation memory with the enhanced context
             conversation_memory[user_id] = updated_context
             return jsonify({"response": contextual_response})
+        else:
+            logging.info("NO CONTEXTUAL RESPONSE - falling back to AI model")
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
@@ -2454,7 +2561,8 @@ def should_continue_subject(user_input, conversation_context):
     continuation_indicators = [
         "more", "tell me more", "explain", "elaborate", "what about",
         "how about", "can you", "could you", "please", "also",
-        "additionally", "furthermore", "besides", "other", "different"
+        "additionally", "furthermore", "besides", "other", "different",
+        "yes", "no", "okay", "ok", "sure", "alright", "good", "fine"
     ]
     
     # Check if input is related to current subject
@@ -2464,6 +2572,27 @@ def should_continue_subject(user_input, conversation_context):
     
     # Check for continuation phrases
     if any(phrase in user_input_lower for phrase in continuation_indicators):
+        return True
+    
+    # Check if this is a short response (likely a follow-up)
+    if len(user_input.split()) <= 5:
+        # Check if the current subject is IT troubleshooting or technical
+        if any(word in current_subject for word in ['mouse', 'keyboard', 'computer', 'troubleshooting', 'internet', 'connection']):
+            # Short responses in technical conversations are likely follow-ups
+            return True
+    
+    # Check if this is a response to a question we asked
+    if conversation_context.get('history'):
+        last_exchange = conversation_context['history'][-1]
+        last_response = last_exchange.get('response', '')
+        
+        # If our last response asked a question, this is likely an answer
+        if any(word in last_response.lower() for word in ['what', 'how', 'when', 'where', 'why', 'which', 'do you', 'have you', 'can you']):
+            return True
+    
+    # Check for pronouns that refer to previous context
+    pronouns = ["it", "this", "that", "they", "them", "their", "the problem", "the issue", "the mouse", "the computer"]
+    if any(pronoun in user_input_lower for pronoun in pronouns):
         return True
     
     return False
