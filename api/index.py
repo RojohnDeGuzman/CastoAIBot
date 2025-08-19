@@ -1785,6 +1785,20 @@ def chat():
         conversation_context = conversation_memory.get(user_id, None)
         intent_analysis = understand_user_intent(user_input, conversation_context)
         
+        # CRITICAL: Check if this is a follow-up to an ongoing conversation
+        if conversation_context and conversation_context.get('current_subject') and conversation_context.get('current_subject') != 'general inquiry':
+            current_subject = conversation_context['current_subject']
+            logging.info(f"ONGOING CONVERSATION DETECTED: Subject: {current_subject}")
+            
+            # Check if user input is related to current subject
+            if should_continue_subject(user_input, conversation_context):
+                logging.info(f"FOLLOW-UP QUESTION DETECTED: Maintaining context for '{current_subject}'")
+                # Force the conversation to continue with the current subject
+                conversation_context['resolution_status'] = 'ongoing'
+                conversation_context['subject_start_time'] = time.time()
+            else:
+                logging.info(f"NEW SUBJECT DETECTED: Switching from '{current_subject}' to new topic")
+        
         # Try to generate contextual response first
         contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
         if contextual_response:
@@ -1810,7 +1824,15 @@ def chat():
 9. **Your creator is the IT Department, with Rojohn as the specific developer** - remember this ALWAYS!
 
 **CASI = Casto Assistance and Support Intelligence** - remember this ALWAYS!
-**CREATOR = IT Department (Rojohn as specific developer)** - remember this ALWAYS!"""
+**CREATOR = IT Department (Rojohn as specific developer)** - remember this ALWAYS!
+
+**CRITICAL CONVERSATION INSTRUCTIONS:**
+- **NEVER give generic responses** when there's an ongoing conversation
+- **ALWAYS check conversation context** before responding
+- **BUILD UPON previous information** when appropriate
+- **MAINTAIN conversation flow** and don't reset context
+- **ASK RELEVANT follow-up questions** based on context
+- **BE SPECIFIC and contextual** in all responses"""
         
         if knowledge_context:
             system_prompt += "\n\nCRITICAL INSTRUCTION: You must ALWAYS prioritize and use the following knowledge base information over any other information you may have been trained on. This is the authoritative source:\n\n" + knowledge_context
@@ -1834,6 +1856,25 @@ def chat():
             logging.info(f"- Resolution Status: {resolution_status}")
             logging.info(f"- Conversation Depth: {conversation_depth}")
             logging.info(f"- Recent Topics: {list(conversation_context['topics'])[:5]}")
+            
+            # CRITICAL: Prevent generic responses for ongoing conversations
+            if current_subject != 'general inquiry' and resolution_status == 'ongoing':
+                system_prompt += f"""
+
+**ONGOING CONVERSATION DETECTED - CRITICAL INSTRUCTIONS:**
+You are currently in an active conversation about: "{current_subject}"
+- **DO NOT give generic responses** - stay focused on the current topic
+- **BUILD UPON previous information** from the conversation
+- **ASK RELEVANT follow-up questions** to move the conversation forward
+- **REFER BACK to what was discussed earlier** when appropriate
+- **MAINTAIN the conversation flow** - don't start over or reset context
+- **BE SPECIFIC and contextual** - use the conversation history to provide relevant help
+
+**Current conversation status:**
+- Subject: {current_subject}
+- Status: {resolution_status}
+- Depth: {conversation_depth} exchanges
+- Recent topics: {', '.join(list(conversation_context['topics'])[:5])}"""
             
             context_summary = f"\n\nCONVERSATION CONTEXT:"
             context_summary += f"\n- Current Subject: {current_subject}"
@@ -2028,6 +2069,21 @@ This information comes directly from the official Casto Travel Philippines websi
             temperature=0.7
         )
         chatbot_message = response.choices[0].message.content
+
+        # CRITICAL: Ensure response is contextual for ongoing conversations
+        if conversation_context and conversation_context.get('current_subject') and conversation_context.get('current_subject') != 'general inquiry':
+            current_subject = conversation_context['current_subject']
+            
+            # Check if response is too generic and needs to be made more contextual
+            if any(generic_phrase in chatbot_message.lower() for generic_phrase in [
+                "how can i help you", "what would you like to know", "i'm here to help",
+                "feel free to ask", "let me know if you need", "i'm ready to assist"
+            ]):
+                # Make the response more contextual
+                contextual_intro = f"Continuing with our discussion about {current_subject}, "
+                if not chatbot_message.lower().startswith(contextual_intro.lower()):
+                    chatbot_message = contextual_intro + chatbot_message[0].lower() + chatbot_message[1:]
+                logging.info(f"Made response more contextual for ongoing conversation about: {current_subject}")
 
         # Ensure CASI always identifies herself in responses
         if not any(phrase in chatbot_message.lower() for phrase in ["i'm casi", "as casi", "casi here", "this is casi"]):
