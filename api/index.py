@@ -1509,10 +1509,11 @@ def fetch_enhanced_casto_info(query):
     enhanced_info = []
     
     try:
-        # Web search for recent information
-        web_results = web_search_casto_info(query)
-        if web_results:
-            enhanced_info.extend(web_results)
+        # Web search for recent information (temporarily disabled for Vercel deployment)
+        # web_results = web_search_casto_info(query)
+        # if web_results:
+        #     enhanced_info.extend(web_results)
+        web_results = None  # Temporarily disabled
         
         # Fetch from Casto websites
         for source in CASTO_SOURCES[:2]:  # Limit to main websites
