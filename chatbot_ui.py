@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QWidget, QSizePolicy, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QInputDialog, QFileDialog, QGraphicsDropShadowEffect, QProgressBar, QCheckBox
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QWidget, QSizePolicy, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QInputDialog, QFileDialog, QProgressBar, QCheckBox
 from PyQt5.QtCore import Qt, QRect, QEasingCurve, QTimer, QPoint, QSize, QPropertyAnimation, QObject, pyqtProperty
 from PyQt5.QtGui import QIcon, QFont, QPainter, QColor, QBrush, QPixmap, QPainterPath, QTextOption, QCursor
 from PyQt5.QtWidgets import QGraphicsOpacityEffect
@@ -576,72 +576,69 @@ class ChatbotWidget(QWidget):
         self._fade_anim = anim  # Prevent garbage collection    
 
     def slide_in_message(self, wrapper, sender="bot"):
-        """Slide in the message bubble from left (bot) or right (user) with fade-in."""
-        # Fade-in
+        """Enhanced slide-in animation with smooth easing and better timing."""
+        # Enhanced fade-in with opacity effect
         effect = QGraphicsOpacityEffect()
         wrapper.setGraphicsEffect(effect)
         fade_anim = QPropertyAnimation(effect, b"opacity")
-        fade_anim.setDuration(300)
+        fade_anim.setDuration(400)  # Slightly longer for smoother feel
         fade_anim.setStartValue(0.0)
         fade_anim.setEndValue(1.0)
+        fade_anim.setEasingCurve(QEasingCurve.OutCubic)  # Smooth easing
         fade_anim.start()
         wrapper._fade_anim = fade_anim  # Prevent garbage collection
 
-        # Slide-in by animating X position
+        # Enhanced slide-in with better positioning and timing
         wrapper.show()
         wrapper.raise_()
         wrapper.repaint()
-        QTimer.singleShot(0, lambda: self._start_slide(wrapper, sender))
+        QTimer.singleShot(50, lambda: self._start_enhanced_slide(wrapper, sender))
 
-    def _start_slide(self, wrapper, sender):
+    def _start_enhanced_slide(self, wrapper, sender):
+        """Enhanced slide animation with better easing and positioning."""
         parent = wrapper.parentWidget()
         if not parent:
             return
-        start_offset = -wrapper.width() if sender == "bot" else wrapper.width()
-        end_pos = wrapper.pos()
-        start_pos = end_pos + QPoint(start_offset, 0)
-        wrapper.move(start_pos)
+            
+        # Calculate start position based on sender
+        if sender == "bot":
+            start_offset = -wrapper.width() - 20  # Start further left for bot
+        else:
+            start_offset = wrapper.width() + 20   # Start further right for user
+            
+        # Create smooth slide animation
         slide_anim = QPropertyAnimation(wrapper, b"pos")
-        slide_anim.setDuration(350)
-        slide_anim.setStartValue(start_pos)
-        slide_anim.setEndValue(end_pos)
-        slide_anim.setEasingCurve(QEasingCurve.OutCubic)
+        slide_anim.setDuration(350)  # Slightly faster for responsiveness
+        slide_anim.setStartValue(wrapper.pos() + QPoint(start_offset, 0))
+        slide_anim.setEndValue(wrapper.pos())
+        slide_anim.setEasingCurve(QEasingCurve.OutBack)  # Bouncy, modern feel
         slide_anim.start()
-        wrapper._slide_anim = slide_anim  # Prevent garbage collection
+        
+        # Store animation reference
+        wrapper._slide_anim = slide_anim
 
     def add_hover_animation(self, button):
-        button.installEventFilter(self)
-        button._hover_anim = QPropertyAnimation(button, b"geometry")
-        button._hover_anim.setDuration(120)    
+        """Simple hover effect without position changes."""
+        # Disable hover animations to prevent button movement
+        pass
 
     def eventFilter(self, obj, event):
-        # Animate scale on hover for top bar buttons
-        if isinstance(obj, QPushButton) and hasattr(obj, "_hover_anim"):
-            if event.type() == event.Enter:
-                rect = obj.geometry()
-                obj._hover_anim.stop()
-                obj._hover_anim.setStartValue(rect)
-                obj._hover_anim.setEndValue(QRect(rect.x()-2, rect.y()-2, rect.width()+4, rect.height()+4))
-                obj._hover_anim.start()
-            elif event.type() == event.Leave:
-                rect = obj.geometry()
-                obj._hover_anim.stop()
-                obj._hover_anim.setStartValue(rect)
-                obj._hover_anim.setEndValue(QRect(rect.x()+2, rect.y()+2, rect.width()-4, rect.height()-4))
-                obj._hover_anim.start()
-        return super().eventFilter(obj, event)    
+        # Hover animations disabled to prevent button movement
+        return super().eventFilter(obj, event)
 
 
     def initUI(self):
         # Set window properties
         self.setWindowTitle("CASI")
-        self.setGeometry(100, 100, 400, 500)
+        self.setGeometry(100, 100, 420, 550)  # Back to larger window size
         self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # Clean, consistent dark theme with no gradients
         self.setStyleSheet("""
         QWidget {
             background-color: #2c3e50;
-            border-radius: 25px;  /* Increased from 20px for a softer look */
+            border-radius: 20px;
             color: #ecf0f1;
         }
         """)
@@ -649,161 +646,197 @@ class ChatbotWidget(QWidget):
         # Set window icon
         self.setWindowIcon(QIcon(resource_path("CASInew-nbg.png")))
 
-        # Main layout
-        layout = QVBoxLayout()
+        # Shadow effect removed to prevent UpdateLayeredWindowIndirect errors
+        # self.setGraphicsEffect(shadow)
 
-        # 1. Create the buttons first!
-        # KB Button (Knowledge Base, only for admin)
+        # Main layout with proper spacing
+        layout = QVBoxLayout()
+        layout.setContentsMargins(25, 25, 25, 15)  # Reduced bottom margin
+        layout.setSpacing(15)  # Tighter spacing between sections
+
+        # === TOP BAR - Clean and organized ===
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.setContentsMargins(0, 0, 0, 0)
+        top_bar_layout.setSpacing(8)
+
+        # Logo with clean styling
+        logo_label = QLabel()
+        logo_pixmap = get_circular_pixmap(resource_path("CASInew-nbg.png"), 35)
+        logo_label.setPixmap(logo_pixmap)
+        logo_label.setStyleSheet("""
+            QLabel {
+                border: 2px solid #3498db;
+                border-radius: 17px;
+                padding: 1px;
+                background: rgba(52, 152, 219, 0.1);
+            }
+        """)
+        top_bar_layout.addWidget(logo_label)
+
+        # App title - Clean, no background
+        title_label = QLabel("CASI")
+        title_label.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        title_label.setStyleSheet("""
+            color: #ecf0f1; 
+            padding-left: 10px;
+            background: transparent;
+            border: none;
+            margin: 0px;
+        """)
+        top_bar_layout.addWidget(title_label)
+
+        # Spacer to push buttons to the right
+        top_bar_layout.addStretch()
+
+        # Control buttons - Clean, consistent sizing
+        button_size = 34
+        
+        # KB Button
         self.kb_button = QPushButton("KB")
-        self.kb_button.setFixedSize(32, 32)
+        self.kb_button.setFixedSize(button_size, button_size)
         self.kb_button.setStyleSheet("""
             QPushButton {
-                background-color: #f1c40f;
+                background-color: #f39c12;
                 color: #2c3e50;
                 border: none;
-                border-radius: 16px;
+                border-radius: 17px;
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
+                font-family: 'Segoe UI', Arial;
             }
             QPushButton:hover {
-                background-color: #f39c12;
+                background-color: #e67e22;
             }
         """)
         self.kb_button.setToolTip("Add Knowledge (Admin Only)")
         self.kb_button.clicked.connect(self.open_knowledge_dialog)
-        self.kb_button.setVisible(False)  # Hide by default, show if admin
+        self.kb_button.setVisible(False)
+        top_bar_layout.addWidget(self.kb_button)
 
+        # Logout Button
         self.logout_button = QPushButton()
-        self.logout_button.setFixedSize(32, 32)
+        self.logout_button.setFixedSize(button_size, button_size)
         self.logout_button.setIcon(QIcon(resource_path("logout.png")))
         self.logout_button.setToolTip("Office 365")
         self.logout_button.setIconSize(QSize(20, 20))
         self.logout_button.setStyleSheet("""
             QPushButton {
-                background-color: #2ecc71;
+                background-color: #27ae60;
                 border: none;
-                border-radius: 16px;
+                border-radius: 17px;
             }
             QPushButton:hover {
-                background-color: #27ae60;
+                background-color: #229954;
             }
         """)
         self.logout_button.clicked.connect(self.toggle_logout_status)
         self.update_logout_button_color()
+        top_bar_layout.addWidget(self.logout_button)
 
+        # Clear Button
         self.clear_button = QPushButton("⟲")
-        self.clear_button.setToolTip("Clear")
-        self.clear_button.setFixedSize(32, 32)
+        self.clear_button.setToolTip("Clear Chat")
+        self.clear_button.setFixedSize(button_size, button_size)
         self.clear_button.setStyleSheet("""
             QPushButton {
-                background-color: #3498db; 
+                background-color: #3498db;
                 color: white; 
                 border: none; 
-                border-radius: 16px;
-                font-size: 16px;
+                border-radius: 17px;
+                font-size: 15px;
                 font-weight: bold;
+                font-family: 'Segoe UI', Arial;
             }
             QPushButton:hover {
                 background-color: #2980b9;
             }
         """)
         self.clear_button.clicked.connect(self.clear_chat)
+        top_bar_layout.addWidget(self.clear_button)
 
+        # Minimize Button
         self.minimize_button = QPushButton("_")
         self.minimize_button.setToolTip("Minimize")
-        self.minimize_button.setFixedSize(32, 32)
+        self.minimize_button.setFixedSize(button_size, button_size)
         self.minimize_button.setStyleSheet("""
             QPushButton {
-                background-color: #3498db; 
+                background-color: #3498db;
                 color: white; 
                 border: none; 
-                border-radius: 16px;
-                font-size: 12px;
+                border-radius: 17px;
+                font-size: 14px;
                 font-weight: bold;
+                font-family: 'Segoe UI', Arial;
             }
             QPushButton:hover {
                 background-color: #2980b9;
             }
         """)
         self.minimize_button.clicked.connect(self.minimize_widget)
+        top_bar_layout.addWidget(self.minimize_button)
 
-        self.close_button = QPushButton("X")
+        # Close Button
+        self.close_button = QPushButton("×")
         self.close_button.setToolTip("Close")
-        self.close_button.setFixedSize(32, 32)
+        self.close_button.setFixedSize(button_size, button_size)
         self.close_button.setStyleSheet("""
             QPushButton {
-                background-color: #e74c3c; 
+                background-color: #e74c3c;
                 color: white; 
-                border: none;
-                border-radius: 16px;
-                font-size: 12px;
+                border: none; 
+                border-radius: 17px;
+                font-size: 18px;
                 font-weight: bold;
+                font-family: 'Segoe UI', Arial;
             }
             QPushButton:hover {
                 background-color: #c0392b;
             }
         """)
         self.close_button.clicked.connect(self.hide_window)
-
-        # --- Top Bar with Logo and Title ---
-        top_bar_layout = QHBoxLayout()
-        top_bar_layout.setContentsMargins(12, 0, 4, 0) # Adjust margins for a clean look
-
-        # Logo
-        logo_label = QLabel()
-        logo_label.setPixmap(get_circular_pixmap(resource_path("CASInew-nbg.png"), 36))
-        top_bar_layout.addWidget(logo_label)
-
-        # App Name
-        title_label = QLabel("CASI")
-        title_label.setFont(QFont("Segoe UI", 18, QFont.Bold))
-        title_label.setStyleSheet("color: white; padding-left: 5px;")
-        top_bar_layout.addWidget(title_label)
-
-        # Spacer to push buttons to the right
-        top_bar_layout.addStretch()
-
-        # Add KB button before logout
-        top_bar_layout.addWidget(self.kb_button)
-        top_bar_layout.addWidget(self.logout_button)
-        
-        top_bar_layout.addWidget(self.clear_button)
-        top_bar_layout.addWidget(self.minimize_button)
         top_bar_layout.addWidget(self.close_button)
-        
-        layout.addLayout(top_bar_layout)
-        # --- End Top Bar ---
 
-        # Chat display (scrollable area)
+        layout.addLayout(top_bar_layout)
+
+        # === CHAT DISPLAY AREA - Clean and organized ===
         self.chat_display_layout = QVBoxLayout()
         self.chat_display_layout.setAlignment(Qt.AlignTop)
+        self.chat_display_layout.setSpacing(4)  # Teams-like compact vertical spacing
+        self.chat_display_layout.setContentsMargins(2, 2, 2, 2)  # Even closer to corners
 
-        # Create a container widget for the layout
+        # Create scrollable chat container
         scroll_content = QWidget()
         scroll_content.setLayout(self.chat_display_layout)
+        scroll_content.setStyleSheet("""
+            QWidget {
+                background: transparent;
+            }
+        """)
 
-        # Create the scroll area and set the container widget
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(scroll_content)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setStyleSheet("""
             QScrollArea {
                 background: transparent;
                 border: none;
+                margin: 0px;
             }
             QScrollBar:vertical {
-                background: transparent;
-                width: 6px;
-                margin: 4px 0 4px 0;
-                border-radius: 3px;
+                background: rgba(52, 152, 219, 0.1);
+                width: 8px;
+                margin: 0px;
+                border-radius: 4px;
             }
             QScrollBar::handle:vertical {
-                background: #2ecc71;
+                background-color: #3498db;
                 min-height: 30px;
-                border-radius: 3px;
+                border-radius: 4px;
             }
             QScrollBar::handle:vertical:hover {
-                background: #27ae60;
+                background-color: #2980b9;
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
             QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
@@ -816,95 +849,105 @@ class ChatbotWidget(QWidget):
                 background: none;
             }
         """)
-        layout.addWidget(scroll_area)
+        layout.addWidget(scroll_area, 1)  # Give scroll area stretch factor of 1 to take up available space
 
-        
-
-        # Typing label
-        self.typing_label = QLabel("")
-        self.typing_label.setStyleSheet("color: #95a5a6; padding: 5px;")
-        layout.addWidget(self.typing_label)
-
-       
-        # Prompt labels above the input field
+        # === ACTION BUTTONS - Enhanced spacing and layout ===
         prompt_layout = QHBoxLayout()
         prompt_layout.setAlignment(Qt.AlignHCenter)
+        prompt_layout.setSpacing(15)  # Tighter spacing
+        prompt_layout.setContentsMargins(2, 2, 2, 0)  # Minimal bottom margin
 
         self.prompt_label = ClickableLabel("🚧 Under Maintenance")
         self.prompt_label.setStyleSheet("""
             QLabel {
                 color: #1abc9c;
-                background: #34495e;
+                background-color: #34495e;
                 border-radius: 12px;
-                padding: 4px 14px;
-                font-size: 11px;
-                margin-bottom: 6px;
-                min-width: 160px;
-                max-width: 200px;
-                border: 2px solid #34495e;
+                padding: 10px 16px;
+                font-size: 12px;
+                font-weight: 500;
+                min-width: 110px;
+                max-width: 140px;
+                min-height: 18px;
+                border: 1px solid #34495e;
+                font-family: 'Segoe UI', Arial;
             }
             QLabel:hover {
-                border: 2px solid #2ecc71;
+                border: 1px solid #2ecc71;
+                background-color: #2c3e50;
             }
         """)
         self.prompt_label.setAlignment(Qt.AlignCenter)
         self.prompt_label.clicked = self.create_helpdesk_email
+        prompt_layout.addStretch(1)  # Left spacer for centering
         prompt_layout.addWidget(self.prompt_label)
 
         self.it_message_label = ClickableLabel("Message IT On Duty")
         self.it_message_label.setStyleSheet("""
             QLabel {
                 color: #1abc9c;
-                background: #34495e;
+                background-color: #34495e;
                 border-radius: 12px;
-                padding: 4px 14px;
-                font-size: 13px;
-                margin-bottom: 6px;
-                min-width: 140px;
-                max-width: 180px;
-                margin-left: 10px;
-                border: 2px solid #34495e;
+                padding: 10px 16px;
+                font-size: 12px;
+                font-weight: 500;
+                min-width: 110px;
+                max-width: 140px;
+                min-height: 18px;
+                border: 1px solid #34495e;
+                font-family: 'Segoe UI', Arial;
             }
             QLabel:hover {
-                border: 2px solid #2ecc71;
+                border: 1px solid #2ecc71;
+                background-color: #2c3e50;
             }
         """)
         self.it_message_label.setAlignment(Qt.AlignCenter)
         self.it_message_label.clicked = self.message_it_on_duty
         prompt_layout.addWidget(self.it_message_label)
-
-
-         
-
+        prompt_layout.addStretch(1)  # Right spacer for centering
 
         layout.addLayout(prompt_layout)
 
-
-        # Input field with send button
+        # === INPUT AREA - Enhanced spacing and layout ===
         input_layout = QHBoxLayout()
+        input_layout.setSpacing(12)  # Better spacing with larger window
+        input_layout.setContentsMargins(5, 8, 5, 4)  # Minimal bottom margin
+        
         self.input_field = ChatInput(self)
-        self.input_field.setWordWrapMode(QTextOption.WordWrap)
-        self.input_field.setPlaceholderText("Write a message...")
-        self.input_field.setFixedHeight(50)
-        self.input_field.send_callback = self.send_message  # Connect to your send function
-
+        self.input_field.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+        self.input_field.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.input_field.setPlaceholderText("Type your message here...")
+        self.input_field.setFixedHeight(55)
+        self.input_field.setMinimumHeight(55)
+        # Hide scrollbars by default - only show when really needed
+        self.input_field.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.input_field.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.input_field.send_callback = self.send_message
 
         def adjust_input_height():
             doc_height = self.input_field.document().size().height()
-            min_height = 51  # Minimum height (same as your initial)
-            max_height = 120  # Maximum height (adjust as you like)
-            new_height = max(min_height, min(int(doc_height) + 12, max_height))
+            min_height = 55
+            max_height = 130
+            new_height = max(min_height, min(int(doc_height) + 15, max_height))
             self.input_field.setFixedHeight(new_height)
+            # Ensure text doesn't get cut off by updating scroll position
+            self.input_field.verticalScrollBar().setValue(0)
 
         self.input_field.textChanged.connect(adjust_input_height)
         self.input_field.setStyleSheet("""
             QTextEdit {
-                background-color: #34495e;
+                background-color: #3c4c5e;
                 border: 2px solid #34495e;
-                padding: 10px;
-                border-radius: 10px;
-                color: #ecf0f1;
-                font-size: 12px;
+                padding: 12px 16px;
+                border-radius: 12px;
+                color: #ffffff;
+                font-size: 13px;
+                font-family: 'Segoe UI', Arial;
+                selection-background-color: #3498db;
+                line-height: 1.4;
+                /* word-wrap removed - not supported in PyQt5 */
+                /* placeholder-color removed - not supported in PyQt5 */
             }
             QTextEdit:hover {
                 border: 2px solid #2ecc71;
@@ -913,28 +956,19 @@ class ChatbotWidget(QWidget):
                 border: 2px solid #2ecc71;
                 outline: none;
             }
-            QTextEdit:focus:hover {
-                border: 2px solid #27ae60;
-            }
             QTextEdit QScrollBar:vertical {
                 background: transparent;
                 width: 8px;
-                margin: 4px 0 4px 0;
+                margin: 0px;
                 border-radius: 4px;
             }
             QTextEdit QScrollBar::handle:vertical {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #2ecc71, stop:1 #27ae60
-                );
+                background-color: #3498db;
                 min-height: 24px;
                 border-radius: 4px;
             }
             QTextEdit QScrollBar::handle:vertical:hover {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #43e97b, stop:1 #38f9d7
-                );
+                background-color: #2980b9;
             }
             QTextEdit QScrollBar::add-line:vertical, 
             QTextEdit QScrollBar::sub-line:vertical,
@@ -948,45 +982,70 @@ class ChatbotWidget(QWidget):
             QTextEdit QScrollBar::add-page:vertical, 
             QTextEdit QScrollBar::sub-page:vertical {
                 background: none;
-            }                   
+            }
+            QTextEdit QScrollBar:vertical {
+                width: 6px;
+                background-color: transparent;
+                border-radius: 3px;
+            }
+            QTextEdit QScrollBar::handle:vertical {
+                background-color: #34495e;
+                border-radius: 3px;
+                min-height: 20px;
+            }
+            QTextEdit QScrollBar::handle:vertical:hover {
+                background-color: #3498db;
+            }
+            QTextEdit QScrollBar:horizontal {
+                height: 0px;
+                background: transparent;
+            }
         """)
         
         input_layout.addWidget(self.input_field)
 
-        self.send_button = QPushButton(">")
-        self.send_button.setToolTip("Enter")
-        self.send_button.setFixedSize(40, 40)
+        # Send button - Clean and simple
+        self.send_button = QPushButton("➤")
+        self.send_button.setToolTip("Send Message")
+        self.send_button.setFixedSize(44, 44)
         self.send_button.setStyleSheet("""
             QPushButton {
-                background-color: #1abc9c; 
+                background-color: #1abc9c;
                 color: white; 
-                border-radius: 20px; 
+                border-radius: 22px; 
                 font-size: 18px;
+                font-weight: bold;
+                font-family: 'Segoe UI', Arial;
+                border: none;
             }
             QPushButton:hover {
                 background-color: #16a085;
             }
             QPushButton:pressed {
-                background-color: #148f77;
+                background-color: #138d75;
             }
         """)
         self.send_button.clicked.connect(self.send_message)
         input_layout.addWidget(self.send_button)
 
         layout.addLayout(input_layout)
-       
 
-        # Dynamic button layout for options
+        # === DYNAMIC BUTTON LAYOUT ===
         self.button_layout = QVBoxLayout()
         layout.addLayout(self.button_layout)
 
-        # Add a spacer to the chat display layout
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.chat_display_layout.addWidget(spacer)
+        # No spacer needed - messages will be added properly to the layout
 
         self.setLayout(layout)
         self.move_to_right_corner()
+
+        # Add hover animations to buttons
+        self.add_hover_animation(self.kb_button)
+        self.add_hover_animation(self.logout_button)
+        self.add_hover_animation(self.clear_button)
+        self.add_hover_animation(self.minimize_button)
+        self.add_hover_animation(self.close_button)
+        self.add_hover_animation(self.send_button)
 
         # Only show generic welcome if not logged in
         cache_path = os.path.join(os.getenv("APPDATA"), "CASI", "token_cache.json")
@@ -1020,25 +1079,19 @@ class ChatbotWidget(QWidget):
         self.minimized_widget.show()    
 
     def start_typing_animation(self):
-        """Start the animated typing indicator for the bot."""
-        if self.typing_animation_timer is None:
-            self.typing_animation_timer = QTimer(self)
-            self.typing_animation_timer.timeout.connect(self.update_typing_label)
-        self.typing_dot_count = 0
-        self.typing_animation_timer.start(400)  # Update every 400ms
+        """Start the enhanced animated typing indicator for the bot."""
+        # Typing animation removed - no longer needed
+        pass
 
     def stop_typing_animation(self):
         """Stop the animated typing indicator."""
-        if self.typing_animation_timer:
-            self.typing_animation_timer.stop()
-        self.typing_label.setText("")
-        self.typing_dot_count = 0
+        # Typing animation removed - no longer needed
+        pass
 
     def update_typing_label(self):
-        """Update the typing label with animated dots."""
-        dots = "." * (self.typing_dot_count % 4)
-        self.typing_label.setText(f"CASI is typing{dots}")
-        self.typing_dot_count += 1
+        """Update the typing label with clean animated dots."""
+        # Typing animation removed - no longer needed
+        pass
 
     def send_message(self):
         """Send user input to backend and display response."""
@@ -1053,9 +1106,11 @@ class ChatbotWidget(QWidget):
         # ADD THIS LINE:
         self.conversation_history.append((user_text, "user"))
 
-        # Start animated typing indicator for bot response
-        self.start_typing_animation()
-        QTimer.singleShot(1500, lambda: self.get_bot_response(user_text))  # Delay for 1.5 seconds
+        # Show typing indicator
+        self.show_typing_indicator()
+
+        # Get bot response with typing delay
+        QTimer.singleShot(800, lambda: self.get_bot_response(user_text))  # Slight delay to show typing
 
     def get_bot_response(self, user_text):
         """Fetch and display the bot's response."""
@@ -1071,7 +1126,6 @@ class ChatbotWidget(QWidget):
                 diagnostic_text = "\n".join(diagnostics)
                 bot_response = f"Network Error: Cannot connect to the server.\n\nDiagnostics:\n{diagnostic_text}\n\nPlease check:\n1. Your network connection\n2. Firewall settings\n3. Contact IT if the issue persists."
                 options = []
-                self.stop_typing_animation()
                 self.display_bot_response(bot_response, options)
                 return
             
@@ -1137,11 +1191,13 @@ class ChatbotWidget(QWidget):
             options = []
 
         # Stop typing animation and display bot response
-        self.stop_typing_animation()
         self.display_bot_response(bot_response, options)
 
     def display_bot_response(self, bot_response, options):
         """Display the bot's response and options after a delay."""
+        # Hide typing indicator before showing response
+        self.hide_typing_indicator()
+        
         self.add_message_bubble(bot_response, sender="bot")
 
         # Clear previous buttons
@@ -1350,22 +1406,35 @@ class ChatbotWidget(QWidget):
         super().paintEvent(event)
 
     def add_message_bubble(self, text, sender="bot"):
-        message_layout = QHBoxLayout()
-        message_layout.setSpacing(8)  # Space between icon and bubble
+        # Create main message container with proper alignment
+        message_container = QWidget()
+        message_container.setStyleSheet("""
+            QWidget {
+                background: transparent;
+                margin: 2px 0px;
+                padding: 0px;
+            }
+        """)
+        
+        message_layout = QHBoxLayout(message_container)
+        message_layout.setSpacing(8)  # Teams-like compact spacing
+        message_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
 
-        # --- Message Bubble ---
+        # === Clean Message Bubble ===
         message_label = QLabel(text)
         message_label.setWordWrap(True)
         message_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         message_label.setOpenExternalLinks(True)
-        message_label.setMaximumWidth(300) # Constrain bubble width
+        message_label.setMaximumWidth(300)  # Match input field width exactly
+        message_label.setMinimumWidth(180)   # Better minimum width
+        message_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Proper text alignment
 
-        # Use a standard QWidget for the bubble
+        # Create clean bubble wrapper
         bubble_wrapper = QWidget()
         bubble_layout = QHBoxLayout(bubble_wrapper)
         bubble_layout.setContentsMargins(0, 0, 0, 0)
         bubble_layout.addWidget(message_label)
-        # --- End Message Bubble ---
+        # === End Message Bubble ===
 
         # Determine if admin is logged in
         cache_path = os.path.join(os.getenv("APPDATA"), "CASI", "token_cache.json")
@@ -1386,41 +1455,282 @@ class ChatbotWidget(QWidget):
             pass
 
         if sender == "bot":
-            # Bot: [ICON] [BUBBLE] [STRETCH]
-            message_label.setStyleSheet("""
-                background-color: #ecf0f1; color: #2c3e50; 
-                border-radius: 10px; padding: 10px; font-size: 14px;
-            """)
+            # Bot: [ICON] [BUBBLE] [STRETCH] - Left aligned
+            # Clean bot logo
             logo_label = QLabel()
-            logo_label.setPixmap(get_circular_pixmap(resource_path("CASInew-nbg.png"), 36))
+            logo_pixmap = get_circular_pixmap(resource_path("CASInew-nbg.png"), 34)
+            logo_label.setPixmap(logo_pixmap)
+            logo_label.setStyleSheet("""
+                QLabel {
+                    border: 2px solid #3498db;
+                    border-radius: 17px;
+                    padding: 1px;
+                    background: rgba(52, 152, 219, 0.1);
+                    margin: 0px;
+                }
+            """)
+            
             message_layout.addWidget(logo_label, 0, Qt.AlignBottom)
             message_layout.addWidget(bubble_wrapper, 0, Qt.AlignBottom)
             message_layout.addStretch()
-        else:  # sender is "user"
-            # User: [STRETCH] [BUBBLE] [ICON]
+            
             message_label.setStyleSheet("""
-                background-color: #1abc9c; color: white; 
-                border-radius: 10px; padding: 10px; font-size: 14px;
+                background-color: #ecf0f1;
+                color: #2c3e50; 
+                border-radius: 16px; 
+                padding: 12px 16px; 
+                font-size: 13px;
+                font-family: 'Segoe UI', Arial;
+                font-weight: 400;
+                border: 1px solid #bdc3c7;
+                margin: 0px;
+                /* box-shadow removed - not supported in PyQt5 */
+                line-height: 1.5;
+                min-height: 20px;
             """)
+            
+        else:  # sender is "user"
+            # User: [STRETCH] [BUBBLE] [ICON] - Right aligned
             message_layout.addStretch()
             message_layout.addWidget(bubble_wrapper, 0, Qt.AlignBottom)
+            
+            message_label.setStyleSheet("""
+                background-color: #1abc9c;
+                color: white; 
+                border-radius: 16px; 
+                padding: 12px 16px; 
+                font-size: 13px;
+                font-family: 'Segoe UI', Arial;
+                font-weight: 400;
+                border: 1px solid #16a085;
+                margin: 0px;
+                /* box-shadow removed - not supported in PyQt5 */
+                line-height: 1.5;
+                min-height: 20px;
+            """)
+            
+            # Always add user avatar for proper alignment
             if self.user_pixmap and not self.user_pixmap.isNull():
                 user_logo_label = QLabel()
                 user_logo_label.setPixmap(self.user_pixmap)
+                user_logo_label.setStyleSheet("""
+                    QLabel {
+                        border: 2px solid #2ecc71;
+                        border-radius: 17px;
+                        padding: 1px;
+                        background: rgba(46, 204, 113, 0.1);
+                        margin: 0px;
+                    }
+                """)
                 message_layout.addWidget(user_logo_label, 0, Qt.AlignBottom)
             else:
-                spacer = QWidget()
-                spacer.setFixedSize(36, 36)
-                message_layout.addWidget(spacer, 0, Qt.AlignBottom)
+                # Create a proper user avatar placeholder for alignment
+                user_logo_label = QLabel()
+                user_logo_label.setFixedSize(34, 34)
+                user_logo_label.setStyleSheet("""
+                    QLabel {
+                        border: 2px solid #2ecc71;
+                        border-radius: 17px;
+                        padding: 1px;
+                        background: rgba(46, 204, 113, 0.1);
+                        margin: 0px;
+                    }
+                """)
+                message_layout.addWidget(user_logo_label, 0, Qt.AlignBottom)
 
-        self.chat_display_layout.addLayout(message_layout)
-        self.slide_in_message(bubble_wrapper, sender)
-        QTimer.singleShot(100, lambda: self.scroll_to_bottom())
+        # Add the message container to the chat display layout
+        self.chat_display_layout.addWidget(message_container)
+        
+        # Ensure the scroll area updates and scrolls to bottom
+        QTimer.singleShot(50, lambda: self.scroll_to_bottom())
+        
+        # Optional: Add slide-in animation (can be disabled if causing issues)
+        # self.slide_in_message(bubble_wrapper, sender)
 
     def scroll_to_bottom(self):
         """Scroll to the bottom of the chat display."""
         scroll_area = self.findChild(QScrollArea)
         scroll_area.verticalScrollBar().setValue(scroll_area.verticalScrollBar().maximum())
+
+    def show_typing_indicator(self):
+        """Show CASI typing indicator"""
+        # Create typing indicator message
+        typing_container = QWidget()
+        typing_container.setObjectName("typing_indicator")  # For easy removal
+        typing_layout = QHBoxLayout(typing_container)
+        typing_layout.setSpacing(8)
+        typing_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Enhanced CASI logo with glow effect
+        logo_label = QLabel()
+        logo_pixmap = QPixmap("CASInew-nbg.png")
+        if not logo_pixmap.isNull():
+            logo_label.setPixmap(logo_pixmap.scaled(34, 34, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        logo_label.setFixedSize(34, 34)
+        logo_label.setObjectName("typing_logo")  # For CSS targeting
+        logo_label.setStyleSheet("""
+            QLabel#typing_logo {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ecf0f1, stop:1 #d5dbdb);
+                border: 2px solid #3498db;
+                border-radius: 17px;
+                margin: 1px;
+            }
+        """)
+        
+        # Add logo pulse animation
+        self.logo_timer = QTimer()
+        self.logo_scale = 1.0
+        self.logo_direction = 1
+        
+        def update_logo_animation():
+            if self.logo_direction == 1:
+                self.logo_scale += 0.01
+                if self.logo_scale >= 1.05:
+                    self.logo_scale = 1.05
+                    self.logo_direction = -1
+            else:
+                self.logo_scale -= 0.01
+                if self.logo_scale <= 0.95:
+                    self.logo_scale = 0.95
+                    self.logo_direction = 1
+            
+            # Apply scale effect
+            logo_label.setFixedSize(int(34 * self.logo_scale), int(34 * self.logo_scale))
+            logo_label.setStyleSheet(f"""
+                QLabel#typing_logo {{
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #ecf0f1, stop:1 #d5dbdb);
+                    border: 2px solid #3498db;
+                    border-radius: {int(17 * self.logo_scale)}px;
+                    margin: 1px;
+                }}
+            """)
+        
+        self.logo_timer.timeout.connect(update_logo_animation)
+        self.logo_timer.start(100)  # Smooth logo animation
+
+        # Typing message with enhanced styling
+        typing_label = QLabel("💬 CASI is typing...")
+        typing_label.setWordWrap(True)
+        typing_label.setMaximumWidth(300)
+        typing_label.setMinimumWidth(180)
+        typing_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        typing_label.setObjectName("typing_message")  # For CSS targeting
+        
+        # Enhanced styling with gradient and shadow
+        typing_label.setStyleSheet("""
+            QLabel#typing_message {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8f9fa, stop:1 #e9ecef);
+                color: #495057;
+                border: 1px solid #dee2e6;
+                border-radius: 16px;
+                padding: 10px 16px;
+                font-size: 13px;
+                font-family: 'Segoe UI', Arial;
+                font-weight: 500;
+                font-style: italic;
+                line-height: 1.4;
+                min-height: 20px;
+                margin: 2px;
+            }
+        """)
+        
+        # Enhanced animated typing effect with multiple animations
+        self.typing_timer = QTimer()
+        self.typing_dots = 0
+        self.typing_phase = 0
+        typing_label_ref = typing_label  # Keep reference for timer
+        
+        def update_typing_text():
+            # Phase 1: "CASI is thinking"
+            # Phase 2: "CASI is typing"
+            # Phase 3: "CASI is typing..." with animated dots
+            if self.typing_phase == 0:
+                typing_label_ref.setText("💭 CASI is thinking")
+                self.typing_phase = 1
+            elif self.typing_phase == 1:
+                typing_label_ref.setText("💬 CASI is typing")
+                self.typing_phase = 2
+            elif self.typing_phase == 2:
+                dots = "." * (self.typing_dots % 4)
+                typing_label_ref.setText(f"💬 CASI is typing{dots}")
+                self.typing_dots += 1
+                if self.typing_dots >= 8:  # Reset dots cycle
+                    self.typing_dots = 0
+        
+        self.typing_timer.timeout.connect(update_typing_text)
+        self.typing_timer.start(400)  # Faster updates for smoother animation
+        
+        # Add subtle breathing animation effect
+        self.breathing_timer = QTimer()
+        self.breathing_alpha = 0.8
+        self.breathing_direction = 1
+        
+        def update_breathing():
+            if self.breathing_direction == 1:
+                self.breathing_alpha += 0.02
+                if self.breathing_alpha >= 1.0:
+                    self.breathing_alpha = 1.0
+                    self.breathing_direction = -1
+            else:
+                self.breathing_alpha -= 0.02
+                if self.breathing_alpha <= 0.7:
+                    self.breathing_alpha = 0.7
+                    self.breathing_direction = 1
+            
+            # Apply breathing effect to the typing label
+            typing_label_ref.setStyleSheet(f"""
+                QLabel#typing_message {{
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 rgba(248, 249, 250, {self.breathing_alpha}), 
+                        stop:1 rgba(233, 236, 239, {self.breathing_alpha}));
+                    color: #495057;
+                    border: 1px solid #dee2e6;
+                    border-radius: 16px;
+                    padding: 10px 16px;
+                    font-size: 13px;
+                    font-family: 'Segoe UI', Arial;
+                    font-weight: 500;
+                    font-style: italic;
+                    line-height: 1.4;
+                    min-height: 20px;
+                    margin: 2px;
+                }}
+            """)
+        
+        self.breathing_timer.timeout.connect(update_breathing)
+        self.breathing_timer.start(50)  # Very smooth breathing effect
+
+        # Add to layout
+        typing_layout.addWidget(logo_label)
+        typing_layout.addWidget(typing_label)
+        typing_layout.addStretch()
+
+        # Add to chat display with margin
+        typing_container.setStyleSheet("QWidget { margin: 2px 0px; }")
+        self.chat_display_layout.addWidget(typing_container)
+        
+        # Scroll to show typing indicator
+        QTimer.singleShot(50, lambda: self.scroll_to_bottom())
+
+    def hide_typing_indicator(self):
+        """Remove CASI typing indicator"""
+        # Stop all animation timers
+        if hasattr(self, 'typing_timer') and self.typing_timer.isActive():
+            self.typing_timer.stop()
+        if hasattr(self, 'breathing_timer') and self.breathing_timer.isActive():
+            self.breathing_timer.stop()
+        if hasattr(self, 'logo_timer') and self.logo_timer.isActive():
+            self.logo_timer.stop()
+        
+        # Find and remove typing indicator
+        for i in range(self.chat_display_layout.count()):
+            widget = self.chat_display_layout.itemAt(i).widget()
+            if widget and widget.objectName() == "typing_indicator":
+                widget.deleteLater()
+                break
 
     def get_last_user_message(self):
         # Returns the last user message from conversation_history, or None
@@ -2263,8 +2573,8 @@ class LoadingScreen(QWidget):
         self.move(x, y)
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(25, 25, 25, 25)
-        layout.setSpacing(20)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(15)
         layout.setAlignment(Qt.AlignCenter)  # Center all content
         
         # CASI Logo
@@ -2317,12 +2627,12 @@ class LoadingScreen(QWidget):
             }
         """)
         
-        # Add shadow effect
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(15)
-        shadow.setColor(QColor(0, 0, 0, 60))
-        shadow.setOffset(0, 3)
-        self.setGraphicsEffect(shadow)
+        # Shadow effect removed to prevent errors
+        # shadow = QGraphicsDropShadowEffect()
+        # shadow.setBlurRadius(15)
+        # shadow.setColor(QColor(0, 0, 0, 60))
+        # shadow.setOffset(0, 3)
+        # self.setGraphicsEffect(shadow)
         
         # Animation timer
         self.animation_timer = QTimer()

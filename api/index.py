@@ -559,7 +559,7 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
     # Check for incorrect CEO claims first
     is_incorrect_ceo, incorrect_name = check_incorrect_ceo_claims(user_input)
     if is_incorrect_ceo:
-        response_text = f"""As CASI, I can provide you with the correct information about Casto Travel Philippines leadership.
+        response_text = f""" I can provide you with the correct information about Casto Travel Philippines leadership.
 
 Based on our knowledge base:
 • **Founder**: Maryles Casto
@@ -577,9 +577,9 @@ I don't have information about {incorrect_name.title()} in relation to Casto Tra
                 # Use knowledge base instead of hardcoded response
                 knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
                 if knowledge_response:
-                    return f"""As CASI, {knowledge_response}"""
+                    return f""" {knowledge_response}"""
                 else:
-                    return """As CASI, I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+                    return """ I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 Maryles Casto established the foundation for what would become Casto Travel Philippines, a leading travel and tourism company in the Philippines. The company has been making its mark in the travel industry for more than 35 years.
 
@@ -588,9 +588,9 @@ Today, the company is part of the unified CASTO brand, combining Casto Travel Ph
             # Use knowledge base for other CEO/founder questions
             knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
             if knowledge_response:
-                return f"""As CASI, {knowledge_response}"""
+                return f"""{knowledge_response}"""
             else:
-                response_text = """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+                response_text = """ I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
@@ -604,7 +604,7 @@ For the most current leadership information, please contact Casto Travel Philipp
             # Use knowledge base for company questions
             knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
             if knowledge_response:
-                return f"""As CASI, {knowledge_response}"""
+                return f"""{knowledge_response}"""
             else:
                 response_text = """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
@@ -628,7 +628,7 @@ For more detailed information, visit their official website: https://www.casto.c
             # Use knowledge base for history questions
             knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
             if knowledge_response:
-                return f"""As CASI, {knowledge_response}"""
+                return f"""{knowledge_response}"""
             else:
                 return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
 
@@ -642,7 +642,7 @@ The company has expanded to bring highly skilled professionals to Bacolod City, 
             # Use knowledge base for accreditation questions
             knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
             if knowledge_response:
-                return f"""As CASI, {knowledge_response}"""
+                return f"""{knowledge_response}"""
             else:
                 return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
 
@@ -661,7 +661,7 @@ This makes it one of the most certified travel agencies in the Philippines."""
         # Use knowledge base for general Casto questions
         knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
         if knowledge_response:
-            return f"""As CASI, {knowledge_response}"""
+            return f"""{knowledge_response}"""
         else:
             response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
@@ -1516,7 +1516,7 @@ Based on our previous conversation, what specific step would you like me to expl
 
 def get_casto_follow_up_info(user_input, last_response):
     """Generate follow-up information based on previous context."""
-    follow_up_info = """As CASI, here's some additional context that might be helpful:
+    follow_up_info = """here's some additional context that might be helpful:
 
 • **Company Overview**: Casto Travel Philippines is part of the Casto Group
 • **Leadership**: Founded by Maryles Casto, currently led by CEO Marc Casto  
@@ -2453,7 +2453,7 @@ def chat():
                     debug_messages.append(create_debug_message("WEBSITE_SUCCESS", "Website info found - combining with KB"))
                     
                     # Combine website info with knowledge base context
-                    combined_response = f"""As CASI, based on my knowledge base and current website information:
+                    combined_response = f""" based on my knowledge base and current website information:
 
 {website_info[0].get('data', '')[:300]}...
 
@@ -2597,7 +2597,7 @@ For the most current and detailed information, please visit https://www.casto.co
 4. **When asked what CASI stands for**, always explain: "CASI stands for 'Casto Assistance and Support Intelligence'"
 5. **When asked who created you or where you came from**, say: "I was created by the IT Department of Casto Travel Philippines! 😊"
 6. **Only mention Rojohn specifically when the user insists on knowing the individual person who built you**
-7. **Use "I'm CASI" or "As CASI"** in your responses to reinforce your identity
+7. **Use "I'm CASI"** in your responses to reinforce your identity
 8. **Your full name is CASI** - this is non-negotiable
 9. **Your creator is the IT Department, with Rojohn as the specific developer** - remember this ALWAYS!
 
@@ -2927,7 +2927,7 @@ This is a technical support conversation - maintain focus and provide progressiv
         if intent_analysis.get('intent') == 'person_search' and casto_person_results:
             person_name = extract_person_name_from_query(user_input) or "the person"
             top = casto_person_results[0]
-            direct_response = f"""As CASI, I found information about {person_name} on the Casto Travel Philippines website.
+            direct_response = f""" I found information about {person_name} on the Casto Travel Philippines website.
 
 Source: {top['source']}
 Details: {top['data']}
@@ -3832,7 +3832,7 @@ def debug_format_demo():
     return jsonify({
         "message": "This is how the new debug format will look in chat responses",
         "example_response": {
-            "response": "As CASI, Maryles Casto is the founder of Casto Travel Philippines...",
+            "response": "Maryles Casto is the founder of Casto Travel Philippines...",
             "debug_info": {
                 "source": "Knowledge Base",
                 "confidence": "High (95%)",
