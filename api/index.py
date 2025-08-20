@@ -2356,7 +2356,7 @@ def chat():
         logging.info("=== Step 1.5: Checking for identity questions ===")
         debug_messages.append(create_debug_message("STEP_1.5_START", "Checking for identity questions"))
         
-        identity_keywords = ["what does casi stand for", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning", "what are you", "tell me about yourself", "name", "called", "call you", "what do they call you", "what should i call you", "how do i address you", "what's your title", "your title", "introduce yourself", "introduction"]
+        identity_keywords = ["what does casi stand for", "what is casi", "who is casi", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning", "what are you", "tell me about yourself", "name", "called", "call you", "what do they call you", "what should i call you", "how do i address you", "what's your title", "your title", "introduce yourself", "introduction", "casi", "who is casi", "what is casi"]
         if any(keyword in user_input.lower() for keyword in identity_keywords):
             logging.info(f"🎯 IDENTITY QUESTION DETECTED: {user_input}")
             debug_messages.append(create_debug_message("IDENTITY_DETECTED", f"Identity question: {user_input}"))
