@@ -36,6 +36,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Debug mode toggle - set to True to see debug info in terminal
 DEBUG_MODE = True  # Change to False to disable terminal debug output
 
+# Local debug echo - sends debug info back to client for local terminal display
+LOCAL_DEBUG_ECHO = True  # Set to True to echo debug info to client
+
 # Define the website sources
 WEBSITE_SOURCE = "https://www.travelpress.com/"
 CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
@@ -2137,11 +2140,19 @@ def chat():
         logging.info(f"🔍 USER QUERY: '{user_input}'")
         logging.info(f"📊 KNOWLEDGE BASE ENTRIES: {len(knowledge_entries)} entries available")
         
+        # Initialize debug message collection for client
+        debug_messages = []
+        debug_messages.append(create_debug_message("USER_QUERY", f"'{user_input}'"))
+        debug_messages.append(create_debug_message("KB_ENTRIES_LOADED", f"{len(knowledge_entries)} entries"))
+        debug_messages.append(create_debug_message("PROCESSING_START", "Starting knowledge base lookup"))
+        
         # Step 1: Check knowledge base for direct answers
         logging.info("🔍 STEP 1: Checking knowledge base for direct answers...")
         start_time = time.time()
         knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
         processing_time = round(time.time() - start_time, 3)
+        
+        debug_messages.append(create_debug_message("STEP_1_COMPLETE", f"Knowledge base lookup took {processing_time}s"))
         
         if knowledge_response:
             logging.info(f"✅ KNOWLEDGE BASE MATCH FOUND: {knowledge_response[:100]}...")
@@ -2149,6 +2160,10 @@ def chat():
             response = f"""As CASI, {knowledge_response}"""
             updated_context = manage_conversation_context(user_id, user_input, response)
             conversation_memory[user_id] = updated_context
+            
+            debug_messages.append(create_debug_message("RESPONSE_SOURCE", "Knowledge Base - Direct Match"))
+            debug_messages.append(create_debug_message("CONFIDENCE_LEVEL", "High (95%)"))
+            debug_messages.append(create_debug_message("AI_MODEL_BYPASSED", "True - Using KB only"))
             
             # Enhanced debug info for knowledge base responses
             debug_info = {
@@ -2183,19 +2198,27 @@ def chat():
             
             return jsonify({
                 "response": response, 
-                "debug_info": debug_info
+                "debug_info": debug_info,
+                "debug_messages": echo_debug_to_client(debug_messages)
             })
         
         # Step 2: If no KB match, check Casto website for additional info
         logging.info("=== Step 2: Checking Casto website ===")
+        debug_messages.append(create_debug_message("STEP_2_START", "Checking Casto website for additional info"))
+        
         if any(keyword in user_input.lower() for keyword in ["casto", "maryles", "marc", "travel", "philippines"]):
             logging.info("Casto-related query detected - checking website...")
+            debug_messages.append(create_debug_message("WEBSITE_CHECK", "Casto-related query detected - checking website"))
             try:
                 # Search Casto website for additional information
                 website_info = search_person_on_casto_website(user_input)
+                debug_messages.append(create_debug_message("WEBSITE_SEARCH", f"Website search completed, found {len(website_info) if website_info else 0} results"))
+                
                 if website_info and any(result.get('found', False) for result in website_info):
                     logging.info("✅ Website info found - combining with knowledge base")
                     logging.info(f"🎯 SOURCE: Casto Website + Knowledge Base")
+                    debug_messages.append(create_debug_message("WEBSITE_SUCCESS", "Website info found - combining with KB"))
+                    
                     # Combine website info with knowledge base context
                     combined_response = f"""As CASI, based on my knowledge base and current website information:
 
@@ -2205,6 +2228,10 @@ For the most current and detailed information, please visit https://www.casto.co
                     
                     updated_context = manage_conversation_context(user_input, combined_response)
                     conversation_memory[user_id] = updated_context
+                    
+                    debug_messages.append(create_debug_message("RESPONSE_SOURCE", "Casto Website + Knowledge Base"))
+                    debug_messages.append(create_debug_message("CONFIDENCE_LEVEL", "High (90%)"))
+                    debug_messages.append(create_debug_message("AI_MODEL_BYPASSED", "True - Using website + KB"))
                     
                     # Enhanced debug info for website + KB responses
                     debug_info = {
@@ -2241,21 +2268,32 @@ For the most current and detailed information, please visit https://www.casto.co
                     
                     return jsonify({
                         "response": combined_response, 
-                        "debug_info": debug_info
+                        "debug_info": debug_info,
+                        "debug_messages": echo_debug_to_client(debug_messages)
                     })
             except Exception as e:
                 logging.warning(f"Website search failed: {e}")
+                debug_messages.append(create_debug_message("WEBSITE_ERROR", f"Website search failed: {e}"))
         else:
             logging.info("Not a Casto-related query - skipping website check")
+            debug_messages.append(create_debug_message("WEBSITE_SKIP", "Not a Casto-related query - skipping website check"))
         
         # Step 3: If still no match, try contextual response
         logging.info("=== Step 3: Trying contextual response ===")
+        debug_messages.append(create_debug_message("STEP_3_START", "Trying contextual response"))
+        
         contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
         if contextual_response:
             logging.info(f"✅ CONTEXTUAL RESPONSE GENERATED: {contextual_response[:100]}...")
             logging.info(f"🎯 SOURCE: Contextual Response (Pre-built)")
+            debug_messages.append(create_debug_message("CONTEXTUAL_SUCCESS", "Contextual response generated successfully"))
+            
             updated_context = manage_conversation_context(user_id, user_input, contextual_response)
             conversation_memory[user_id] = updated_context
+            
+            debug_messages.append(create_debug_message("RESPONSE_SOURCE", "Contextual Response System"))
+            debug_messages.append(create_debug_message("CONFIDENCE_LEVEL", "Medium (75%)"))
+            debug_messages.append(create_debug_message("AI_MODEL_BYPASSED", "True - Using contextual response"))
             
             # Enhanced debug info for contextual responses
             debug_info = {
@@ -2294,13 +2332,20 @@ For the most current and detailed information, please visit https://www.casto.co
             
             return jsonify({
                 "response": contextual_response, 
-                "debug_info": debug_info
+                "debug_info": debug_info,
+                "debug_messages": echo_debug_to_client(debug_messages)
             })
+        else:
+            debug_messages.append(create_debug_message("CONTEXTUAL_FAILED", "No contextual response available"))
         
         # Step 4: Last resort - AI model with strict knowledge base instructions
         logging.info("=== Step 4: Falling back to AI model (last resort) ===")
         logging.info("⚠️ WARNING: No KB, website, or contextual response found - using AI model")
         logging.info(f"🎯 SOURCE: AI Model (Last Resort)")
+        
+        debug_messages.append(create_debug_message("STEP_4_START", "Falling back to AI model (last resort)"))
+        debug_messages.append(create_debug_message("AI_MODEL_WARNING", "No KB, website, or contextual response found"))
+        debug_messages.append(create_debug_message("AI_MODEL_FALLBACK", "Using AI model with strict KB instructions"))
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
@@ -2882,6 +2927,11 @@ This information comes directly from the official Casto Travel Philippines websi
         logging.info(f"🎯 FINAL SOURCE: AI Model with KB instructions")
         logging.info(f"📝 AI Response: {combined_response[:200]}...")
         
+        debug_messages.append(create_debug_message("AI_MODEL_SUCCESS", "AI model response generated successfully"))
+        debug_messages.append(create_debug_message("RESPONSE_SOURCE", "AI Model (Groq Mixtral)"))
+        debug_messages.append(create_debug_message("CONFIDENCE_LEVEL", "Medium (60%)"))
+        debug_messages.append(create_debug_message("AI_MODEL_BYPASSED", "False - AI model used"))
+        
         # Enhanced debug info for AI model responses
         debug_info = {
             "source": "AI Model (Groq Mixtral)",
@@ -2927,6 +2977,7 @@ This information comes directly from the official Casto Travel Philippines websi
         return jsonify({
             "response": combined_response,
             "debug_info": debug_info,
+            "debug_messages": echo_debug_to_client(debug_messages),
             "follow_up_suggestions": follow_up_suggestions,
             "conversation_context": {
                 "current_subject": conversation_context.get('current_subject', 'general inquiry') if conversation_context else 'general inquiry',
@@ -3457,3 +3508,18 @@ def get_debug_status():
         "message": f"Debug mode is currently {'enabled' if DEBUG_MODE else 'disabled'}",
         "note": "When enabled, you'll see detailed debug info in the terminal for each chat request"
     })
+
+def create_debug_message(message_type, details):
+    """Create a debug message for local terminal display"""
+    if not LOCAL_DEBUG_ECHO:
+        return None
+    
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    return f"[DEBUG] [{timestamp}] {message_type}: {details}"
+
+def echo_debug_to_client(debug_messages):
+    """Echo debug messages back to client for local terminal display"""
+    if not LOCAL_DEBUG_ECHO or not debug_messages:
+        return []
+    
+    return [msg for msg in debug_messages if msg]
