@@ -2306,7 +2306,7 @@ def chat():
             
             # Generate contextual response that references ongoing conversation
             base_response = f""" {knowledge_response}"""
-            contextual_response = generate_contextual_response(user_input, conversation_context, base_response)
+            contextual_response = generate_context_aware_response(user_input, conversation_context, base_response)
             
             updated_context = manage_conversation_context(user_id, user_input, contextual_response)
             conversation_memory[user_id] = updated_context
@@ -2386,7 +2386,7 @@ def chat():
             logging.info(f"🎯 IDENTITY RESPONSE: {identity_response[:100]}...")
             
             # Generate contextual response for identity questions
-            contextual_identity_response = generate_contextual_response(user_input, conversation_context, identity_response)
+            contextual_identity_response = generate_context_aware_response(user_input, conversation_context, identity_response)
             updated_context = manage_conversation_context(user_id, user_input, contextual_identity_response)
             conversation_memory[user_id] = updated_context
             
@@ -3731,7 +3731,7 @@ def maintain_it_troubleshooting_context(user_input, conversation_context):
     
     return conversation_context
 
-def generate_contextual_response(user_input, conversation_context, base_response):
+def generate_context_aware_response(user_input, conversation_context, base_response):
     """Generate a contextual response that references ongoing conversation."""
     if not conversation_context or not conversation_context.get('current_subject'):
         return base_response
