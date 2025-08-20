@@ -41,7 +41,7 @@ CASTO_ABOUT_US = "https://www.casto.com.ph/about-us"
 # Additional Casto-related sources for enhanced learning
 CASTO_SOURCES = [
     "https://www.casto.com.ph/",
-    "https://www.castotravel.ph/",
+    "https://www.casto.com.ph/",
     "https://www.facebook.com/castotravelphilippines",
     "https://www.linkedin.com/company/casto-travel-philippines",
     "https://www.instagram.com/castotravelph/",
@@ -515,6 +515,9 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
     """Create a direct response for Casto Travel questions using knowledge base only."""
     user_input_lower = user_input.lower()
     
+    logging.info(f"Creating direct Casto response for: {user_input}")
+    logging.info(f"Knowledge entries available: {len(knowledge_entries) if knowledge_entries else 0}")
+    
     # Check for incorrect CEO claims first
     is_incorrect_ceo, incorrect_name = check_incorrect_ceo_claims(user_input)
     if is_incorrect_ceo:
@@ -533,24 +536,39 @@ I don't have information about {incorrect_name.title()} in relation to Casto Tra
         if "casto" in user_input_lower:
             # Special handling for "who is maryles casto" questions
             if "maryles" in user_input_lower:
-                return """As CASI, I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+                # Use knowledge base instead of hardcoded response
+                knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+                if knowledge_response:
+                    return f"""As CASI, {knowledge_response}"""
+                else:
+                    return """As CASI, I can tell you that based on my knowledge base, Maryles Casto is the founder of Casto Travel Philippines. She started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 Maryles Casto established the foundation for what would become Casto Travel Philippines, a leading travel and tourism company in the Philippines. The company has been making its mark in the travel industry for more than 35 years.
 
 Today, the company is part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions, with Marc Casto serving as the current CEO, continuing the family legacy of excellence in the travel industry."""
             
-            response_text = """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
+            # Use knowledge base for other CEO/founder questions
+            knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+            if knowledge_response:
+                return f"""As CASI, {knowledge_response}"""
+            else:
+                response_text = """As CASI, I can tell you that based on my knowledge base, Casto Travel Philippines was founded by Maryles Casto, who started as a flight attendant and went on to own one of the top travel companies in Silicon Valley. 
 
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
 For the most current leadership information, please contact Casto Travel Philippines directly at https://www.casto.com.ph/"""
-            
-            return make_links_clickable(response_text)
+                
+                return make_links_clickable(response_text)
     
     # Check for company information
     if any(word in user_input_lower for word in ["what", "company", "business", "services"]):
         if "casto" in user_input_lower:
-            response_text = """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+            # Use knowledge base for company questions
+            knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+            if knowledge_response:
+                return f"""As CASI, {knowledge_response}"""
+            else:
+                response_text = """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company has been making its mark in the travel industry for more than 35 years. It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in Metro Manila, plus expansion to Bacolod City.
 
@@ -563,13 +581,18 @@ Services include:
 • Group travel arrangements
 
 For more detailed information, visit their official website: https://www.casto.com.ph/"""
-            
-            return make_links_clickable(response_text)
+                
+                return make_links_clickable(response_text)
     
     # Check for history questions
     if any(word in user_input_lower for word in ["history", "background", "when", "started"]):
         if "casto" in user_input_lower:
-            return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
+            # Use knowledge base for history questions
+            knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+            if knowledge_response:
+                return f"""As CASI, {knowledge_response}"""
+            else:
+                return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
 
 It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in the heart of Metro Manila. The company combines Casto Travel Philippines and MVC Solutions under the unified CASTO brand.
 
@@ -578,7 +601,12 @@ The company has expanded to bring highly skilled professionals to Bacolod City, 
     # Check for accreditation questions
     if any(word in user_input_lower for word in ["accreditation", "certification", "certified", "member"]):
         if "casto" in user_input_lower:
-            return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
+            # Use knowledge base for accreditation questions
+            knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+            if knowledge_response:
+                return f"""As CASI, {knowledge_response}"""
+            else:
+                return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
 
 • ISO 27001:2013 Certified by GICG and JAS-ANZ
 • International Air Transport Associated Accredited Agent
@@ -592,13 +620,18 @@ This makes it one of the most certified travel agencies in the Philippines."""
     
     # If no specific match but it's a Casto question, provide general info
     if "casto" in user_input_lower:
-        response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+        # Use knowledge base for general Casto questions
+        knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+        if knowledge_response:
+            return f"""As CASI, {knowledge_response}"""
+        else:
+            response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company was founded by Maryles Casto and has been serving the travel industry for more than 35 years. They offer comprehensive travel services including domestic and international packages, hotel bookings, tours, travel insurance, and corporate travel management.
 
 For the most current and detailed information, please visit their official website: https://www.casto.com.ph/"""
-        
-        return make_links_clickable(response_text)
+            
+            return make_links_clickable(response_text)
     
     return None  # Let the AI model handle non-Casto questions
 
@@ -1668,10 +1701,15 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
     """Check if we have knowledge base entries for specific people."""
     user_input_lower = user_input.lower()
     
+    logging.info(f"Checking knowledge base for person in: '{user_input}'")
+    logging.info(f"Knowledge entries type: {type(knowledge_entries)}")
+    logging.info(f"Knowledge entries count: {len(knowledge_entries) if knowledge_entries else 0}")
+    
     # List of known Casto personnel from knowledge base with multiple variations
     casto_personnel = [
         "maryles casto", "marc casto", "elaine randrup", "alwin benedicto", 
-        "george anzures", "ma. berdandina galvez", "berdandina galvez"
+        "george anzures", "ma. berdandina galvez", "berdandina galvez",
+        "luz bagtas", "berlin torres", "voltaire villaflores", "victor villaflores"
     ]
     
     # Check if the query is about any known Casto personnel
@@ -1682,13 +1720,20 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
             
             # Find the relevant knowledge base entry
             for entry in knowledge_entries:
-                entry_question = entry.get('question', '').lower()
-                entry_answer = entry.get('answer', '').lower()
-                
-                # Check if person appears in question or answer
-                if person in entry_question or person in entry_answer:
-                    logging.info(f"Found knowledge base entry for {person}: {entry.get('answer', '')[:100]}...")
-                    return entry.get('answer', '')
+                # Handle both dictionary and string formats
+                if isinstance(entry, dict):
+                    entry_question = entry.get('question', '').lower()
+                    entry_answer = entry.get('answer', '').lower()
+                    
+                    # Check if person appears in question or answer
+                    if person in entry_question or person in entry_answer:
+                        logging.info(f"Found knowledge base entry for {person}: {entry.get('answer', '')[:100]}...")
+                        return entry.get('answer', '')
+                elif isinstance(entry, str):
+                    # Handle string format (when knowledge base is joined as string)
+                    if person in entry.lower():
+                        logging.info(f"Found knowledge base entry for {person} in string format: {entry[:100]}...")
+                        return entry
             
             logging.info(f"Person '{person}' found in input but no matching knowledge base entry")
     
@@ -2008,6 +2053,10 @@ def chat():
 
         # Use cached knowledge retrieval
         knowledge_entries = get_cached_knowledge()
+        logging.info(f"Chat endpoint: Loaded {len(knowledge_entries)} knowledge base entries")
+        logging.info(f"Knowledge entries type: {type(knowledge_entries)}")
+        if knowledge_entries:
+            logging.info(f"Sample knowledge entry: {knowledge_entries[0] if len(knowledge_entries) > 0 else 'None'}")
         
         # Generate user ID for conversation tracking
         user_id = email or "anonymous"
@@ -2049,6 +2098,12 @@ def chat():
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
+        logging.info(f"Knowledge context length: {len(knowledge_context)} characters")
+        logging.info(f"Knowledge context preview: {knowledge_context[:200]}...")
+        
+        if not knowledge_context:
+            logging.warning("No knowledge base content available - this may cause issues")
+        
         system_prompt = """You are **CASI** - a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
 
 **CRITICAL IDENTITY INSTRUCTIONS:**
@@ -2776,3 +2831,32 @@ def maintain_it_troubleshooting_context(user_input, conversation_context):
             logging.info(f"Maintaining IT troubleshooting context: {current_subject}")
     
     return conversation_context
+
+@app.route("/test/kb", methods=["GET"])
+def test_knowledge_base():
+    """Test endpoint to verify knowledge base functionality"""
+    try:
+        knowledge_entries = get_cached_knowledge()
+        
+        # Test a specific query
+        test_query = "Who is Maryles Casto?"
+        test_result = check_knowledge_base_for_person(test_query, knowledge_entries)
+        
+        return jsonify({
+            "status": "success",
+            "knowledge_base_test": {
+                "entries_count": len(knowledge_entries),
+                "entries_type": str(type(knowledge_entries)),
+                "sample_entry": knowledge_entries[0] if knowledge_entries else None,
+                "test_query": test_query,
+                "test_result_found": bool(test_result),
+                "test_result": test_result[:200] if test_result else None,
+                "knowledge_context_sample": "\n".join(knowledge_entries)[:300] if knowledge_entries else None
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "knowledge_base_test": None
+        })
