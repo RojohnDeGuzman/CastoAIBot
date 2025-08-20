@@ -1701,6 +1701,7 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
     logging.info(f"🔍 Checking knowledge base for: '{user_input}'")
     logging.info(f"📊 Knowledge entries type: {type(knowledge_entries)}")
     logging.info(f"📊 Knowledge entries count: {len(knowledge_entries) if knowledge_entries else 0}")
+    logging.info(f"🔍 User input lower: '{user_input_lower}'")
     
     # List of known Casto personnel from knowledge base with multiple variations
     casto_personnel = [
@@ -2130,15 +2131,19 @@ def chat():
         
         # NEW APPROACH: Always check knowledge base first, then Casto website, then AI model
         logging.info("=== NEW APPROACH: Checking knowledge base first ===")
+        logging.info(f"🔍 USER QUERY: '{user_input}'")
+        logging.info(f"📊 KNOWLEDGE BASE ENTRIES: {len(knowledge_entries)} entries available")
         
         # Step 1: Check knowledge base for direct answers
+        logging.info("🔍 STEP 1: Checking knowledge base for direct answers...")
         knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
         if knowledge_response:
             logging.info(f"✅ KNOWLEDGE BASE MATCH FOUND: {knowledge_response[:100]}...")
+            logging.info(f"🎯 SOURCE: Knowledge Base (Direct Match)")
             response = f"""As CASI, {knowledge_response}"""
             updated_context = manage_conversation_context(user_id, user_input, response)
             conversation_memory[user_id] = updated_context
-            return jsonify({"response": response})
+            return jsonify({"response": response, "source": "knowledge_base", "debug": "Direct KB match found"})
         
         # Step 2: If no KB match, check Casto website for additional info
         logging.info("=== Step 2: Checking Casto website ===")
@@ -2149,6 +2154,7 @@ def chat():
                 website_info = search_person_on_casto_website(user_input)
                 if website_info and any(result.get('found', False) for result in website_info):
                     logging.info("✅ Website info found - combining with knowledge base")
+                    logging.info(f"🎯 SOURCE: Casto Website + Knowledge Base")
                     # Combine website info with knowledge base context
                     combined_response = f"""As CASI, based on my knowledge base and current website information:
 
@@ -2156,23 +2162,28 @@ def chat():
 
 For the most current and detailed information, please visit https://www.casto.com.ph/ or contact Casto Travel Philippines directly."""
                     
-                    updated_context = manage_conversation_context(user_id, user_input, combined_response)
+                    updated_context = manage_conversation_context(user_input, combined_response)
                     conversation_memory[user_id] = updated_context
-                    return jsonify({"response": combined_response})
+                    return jsonify({"response": combined_response, "source": "website_kb", "debug": "Website + KB combination"})
             except Exception as e:
                 logging.warning(f"Website search failed: {e}")
+        else:
+            logging.info("Not a Casto-related query - skipping website check")
         
         # Step 3: If still no match, try contextual response
         logging.info("=== Step 3: Trying contextual response ===")
         contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
         if contextual_response:
             logging.info(f"✅ CONTEXTUAL RESPONSE GENERATED: {contextual_response[:100]}...")
+            logging.info(f"🎯 SOURCE: Contextual Response (Pre-built)")
             updated_context = manage_conversation_context(user_id, user_input, contextual_response)
             conversation_memory[user_id] = updated_context
-            return jsonify({"response": contextual_response})
+            return jsonify({"response": contextual_response, "source": "contextual", "debug": "Contextual response generated"})
         
         # Step 4: Last resort - AI model with strict knowledge base instructions
         logging.info("=== Step 4: Falling back to AI model (last resort) ===")
+        logging.info("⚠️ WARNING: No KB, website, or contextual response found - using AI model")
+        logging.info(f"🎯 SOURCE: AI Model (Last Resort)")
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
@@ -2543,8 +2554,13 @@ This information comes directly from the official Casto Travel Philippines websi
         # Generate contextual follow-up suggestions
         follow_up_suggestions = generate_follow_up_suggestions(user_input, conversation_context, combined_response)
         
+        logging.info(f"🎯 FINAL SOURCE: AI Model with KB instructions")
+        logging.info(f"📝 AI Response: {combined_response[:200]}...")
+        
         return jsonify({
             "response": combined_response,
+            "source": "ai_model",
+            "debug": "AI model with knowledge base instructions",
             "follow_up_suggestions": follow_up_suggestions,
             "conversation_context": {
                 "current_subject": conversation_context.get('current_subject', 'general inquiry') if conversation_context else 'general inquiry',
