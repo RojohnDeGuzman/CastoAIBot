@@ -1705,7 +1705,7 @@ def get_casi_identity_response():
     """Get CASI's standard identity response."""
     return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
 
-**CASI** stands for **"Casto Assistance and Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
+**CASI** stands for **"Casto Assistance & Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
 
 I'm here to help you with any questions you have about Casto Travel Philippines, and I can also assist with general knowledge and IT troubleshooting! 😊
 
@@ -1717,7 +1717,7 @@ def get_casi_name_only_response():
 
 def get_casi_creator_response():
     """Get CASI's response about who created her."""
-    return """I'm **CASI** - and I'm proud to say that I was created by the **IT Department** of Casto Travel Philippines! 😊
+    return """I'm **CASI** - and I'm proud to say that I was created by the **Casto IT Department**! 😊
 
 I was designed to be your specialized AI assistant for Casto Travel Philippines information, and I'm here to help you with any questions you have about the company, their services, leadership, and more!
 
@@ -1725,9 +1725,9 @@ Is there anything specific about Casto Travel Philippines you'd like to know?"""
 
 def get_casi_specific_creator_response():
     """Get CASI's response when user specifically asks about the individual person who built her."""
-    return """I'm **CASI** - and I was created by the **IT Department** of Casto Travel Philippines! 
+    return """I'm **CASI** - and I was created by the **Casto IT Department**! 
 
-Since you're asking specifically about the individual who built me, I was developed by **Rojohn** from our IT team! 😊
+Since you're asking specifically about the individual who built me, I was developed by **Rojohn**! 😊
 
 He designed me to be your specialized AI assistant for Casto Travel Philippines information. Is there anything specific about Casto Travel Philippines you'd like to know?"""
 
@@ -2308,7 +2308,83 @@ def chat():
                 "debug_messages": echo_debug_to_client(debug_messages)
             })
         
-        # Step 2: If no KB match, check Casto website for additional info
+        # Step 1.5: Check for identity questions BEFORE website check
+        logging.info("=== Step 1.5: Checking for identity questions ===")
+        debug_messages.append(create_debug_message("STEP_1.5_START", "Checking for identity questions"))
+        
+        identity_keywords = ["what does casi stand for", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning", "what are you", "tell me about yourself"]
+        if any(keyword in user_input.lower() for keyword in identity_keywords):
+            logging.info(f"🎯 IDENTITY QUESTION DETECTED: {user_input}")
+            debug_messages.append(create_debug_message("IDENTITY_DETECTED", f"Identity question: {user_input}"))
+            
+            # Force return appropriate identity response
+            if "stand for" in user_input.lower() or "meaning" in user_input.lower():
+                identity_response = get_casi_identity_response()
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "What CASI stands for"))
+            elif "created" in user_input.lower() or "built" in user_input.lower() or "made" in user_input.lower() or "developed" in user_input.lower():
+                if any(word in user_input.lower() for word in ["who", "person", "individual", "specifically"]):
+                    identity_response = get_casi_specific_creator_response()
+                    debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Specific creator (Rojohn)"))
+                else:
+                    identity_response = get_casi_creator_response()
+                    debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General creator (Casto IT Department)"))
+            elif "name" in user_input.lower() or "who are you" in user_input.lower():
+                identity_response = get_casi_name_only_response()
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Name only"))
+            else:
+                identity_response = get_casi_identity_response()
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General identity"))
+            
+            logging.info(f"🎯 IDENTITY RESPONSE: {identity_response[:100]}...")
+            updated_context = manage_conversation_context(user_id, user_input, identity_response)
+            conversation_memory[user_id] = updated_context
+            
+            # Enhanced debug info for identity responses
+            debug_info = {
+                "source": "Identity System",
+                "confidence": "High (95%)",
+                "response_type": "Identity Question Response",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "identity_question_type": next((qtype for qtype in ["stand_for", "creator", "name", "general"] if any(phrase in user_input.lower() for phrase in {
+                    "stand_for": ["stand for", "meaning"],
+                    "creator": ["created", "built", "made", "developed"],
+                    "name": ["name", "who are you"],
+                    "general": ["what is", "what's", "what are you", "tell me about yourself"]
+                }[qtype])), "general"),
+                "search_method": "Identity Keyword Detection + Pre-built Response",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Authoritative Identity Info",
+                "safety_check": "Identity Question Handled Directly"
+            }
+            
+            # Terminal debug output
+            if DEBUG_MODE:
+                print("\n" + "="*80)
+                print("🎯 CASI DEBUG MODE - IDENTITY RESPONSE")
+                print("="*80)
+                print(f"📝 User Query: '{user_input}'")
+                print(f"🔍 Source: {debug_info['source']}")
+                print(f"✅ Confidence: {debug_info['confidence']}")
+                print(f"⚡ Processing Time: {debug_info['processing_time']}")
+                print(f"📊 KB Entries Checked: {debug_info['knowledge_entries_checked']}")
+                print(f"🔍 Search Method: {debug_info['search_method']}")
+                print(f"🎯 Response Type: {debug_info['response_type']}")
+                print(f"🔑 Matched Keywords: {debug_info['matched_keywords']}")
+                print(f"🚫 AI Model Bypassed: {debug_info['ai_model_bypassed']}")
+                print(f"⭐ Response Quality: {debug_info['response_quality']}")
+                print(f"🛡️  Safety Check: {debug_info['safety_check']}")
+                print("="*80 + "\n")
+            
+            return jsonify({
+                "response": identity_response,
+                "debug_info": debug_info,
+                "debug_messages": echo_debug_to_client(debug_messages)
+            })
+        
+        # Step 2: If no KB match and no identity question, check Casto website for additional info
         logging.info("=== Step 2: Checking Casto website ===")
         debug_messages.append(create_debug_message("STEP_2_START", "Checking Casto website for additional info"))
         
