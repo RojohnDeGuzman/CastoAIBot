@@ -1251,16 +1251,30 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
         logging.info(f"GENERATING CONTEXTUAL RESPONSE for ongoing conversation about: {current_subject}")
         
         # Check if this is a greeting that wasn't caught by intent analysis
-        greeting_words = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings']
+        greeting_words = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings', 'morning', 'afternoon', 'evening', 'sup', 'yo', 'howdy', 'greetings', 'good day', 'good night', 'hey there', 'hi there', 'hello there', 'what\'s up', 'whats up', 'wassup', 'how are you', 'how\'s it going', 'how is it going']
         if any(word in user_input_lower for word in greeting_words):
             logging.info(f"GREETING DETECTED IN CONTEXT: {user_input}")
-            return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
-
-**CASI** stands for **"Casto Assistance & Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
-
-I'm here to help you with any questions you have about Casto Travel Philippines, and I can also assist with general knowledge and IT troubleshooting! 😊
-
-How can I assist you today?"""
+            
+            import random
+            greeting_responses = [
+                "Hi! I'm CASI! How can I help you today? 😊",
+                "Hello! I'm CASI! What can I assist you with? 👋",
+                "Hey there! I'm CASI! Ready to help! ✨",
+                "Good to see you! I'm CASI! What do you need? 🌟",
+                "Greetings! I'm CASI! How may I be of service? 🎯",
+                "Hi there! I'm CASI! What can I do for you? 💫",
+                "Hello! I'm CASI! I'm here to help! 🚀",
+                "Hey! I'm CASI! What would you like to know? ⭐",
+                "Good day! I'm CASI! How can I assist? 🌈",
+                "Hi! I'm CASI! What can I help you with? 🎉",
+                "Hello! I'm CASI! Ready to assist! 🎯",
+                "Hey! I'm CASI! What do you need help with? ✨",
+                "Hi there! I'm CASI! How can I be helpful? 🌟",
+                "Greetings! I'm CASI! What can I do to help? 💫",
+                "Good to see you! I'm CASI! What would you like assistance with? 🚀"
+            ]
+            
+            return random.choice(greeting_responses)
         
         # Handle follow-up questions for ongoing conversations
         if should_continue_subject(user_input, conversation_context):
@@ -1288,9 +1302,26 @@ How can I assist you today?"""
     
     # Handle greetings
     if intent_analysis['intent'] == 'greeting':
-        return """Hello! I'm CASI, your specialized AI assistant for Casto Travel Philippines information. 
-
-I'm here to provide you with expert knowledge about Casto Travel Philippines, their services, leadership, and company details. How can I assist you today? 😊"""
+        import random
+        greeting_responses = [
+            "Hi! I'm CASI! How can I help you today? 😊",
+            "Hello! I'm CASI! What can I assist you with? 👋",
+            "Hey there! I'm CASI! Ready to help! ✨",
+            "Good to see you! I'm CASI! What do you need? 🌟",
+            "Greetings! I'm CASI! How may I be of service? 🎯",
+            "Hi there! I'm CASI! What can I do for you? 💫",
+            "Hello! I'm CASI! I'm here to help! 🚀",
+            "Hey! I'm CASI! What would you like to know? ⭐",
+            "Good day! I'm CASI! How can I assist? 🌈",
+            "Hi! I'm CASI! What can I help you with? 🎉",
+            "Hello! I'm CASI! Ready to assist! 🎯",
+            "Hey! I'm CASI! What do you need help with? ✨",
+            "Hi there! I'm CASI! How can I be helpful? 🌟",
+            "Greetings! I'm CASI! What can I do to help? 💫",
+            "Good to see you! I'm CASI! What would you like assistance with? 🚀"
+        ]
+        
+        return random.choice(greeting_responses)
     
 
     
@@ -1326,17 +1357,32 @@ If you have more questions in the future, feel free to ask. Have a great day! �
         logging.info(f"CASI CASUAL MENTION DETECTED: {user_input}")
         return get_casi_name_only_response()
     
-    # Check if this is a greeting that wasn't caught by intent analysis
-    greeting_words = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings']
-    if any(word in user_input_lower for word in greeting_words):
-        logging.info(f"GREETING DETECTED: {user_input}")
-        return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
-
-**CASI** stands for **"Casto Assistance & Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
-
-I'm here to help you with any questions you have about Casto Travel Philippines, and I can also assist with general knowledge and IT troubleshooting! 😊
-
-How can I assist you today?"""
+            # Check if this is a greeting that wasn't caught by intent analysis
+        greeting_words = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings', 'morning', 'afternoon', 'evening', 'sup', 'yo', 'howdy', 'greetings', 'good day', 'good night', 'hey there', 'hi there', 'hello there', 'what\'s up', 'whats up', 'wassup', 'how are you', 'how\'s it going', 'how is it going']
+        if any(word in user_input_lower for word in greeting_words):
+            logging.info(f"GREETING DETECTED: {user_input}")
+            
+            # Random greeting responses for variety - always showing CASI is ready to help
+            import random
+            greeting_responses = [
+                "Hi! I'm CASI! How can I help you today? 😊",
+                "Hello! I'm CASI! What can I assist you with? 👋",
+                "Hey there! I'm CASI! Ready to help! ✨",
+                "Good to see you! I'm CASI! What do you need? 🌟",
+                "Greetings! I'm CASI! How may I be of service? 🎯",
+                "Hi there! I'm CASI! What can I do for you? 💫",
+                "Hello! I'm CASI! I'm here to help! 🚀",
+                "Hey! I'm CASI! What would you like to know? ⭐",
+                "Good day! I'm CASI! How can I assist? 🌈",
+                "Hi! I'm CASI! What can I help you with? 🎉",
+                "Hello! I'm CASI! Ready to assist! 🎯",
+                "Hey! I'm CASI! What do you need help with? ✨",
+                "Hi there! I'm CASI! How can I be helpful? 🌟",
+                "Greetings! I'm CASI! What can I do to help? 💫",
+                "Good to see you! I'm CASI! What would you like assistance with? 🚀"
+            ]
+            
+            return random.choice(greeting_responses)
     
     logging.info(f"NO CONTEXTUAL RESPONSE FOR: {user_input} - will use AI model")
     return None  # Let the main logic handle other cases
