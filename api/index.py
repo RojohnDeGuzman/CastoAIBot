@@ -1414,15 +1414,11 @@ The more details you can provide, the better I can help you resolve this {curren
 
 def generate_casto_progressive_response(user_input, conversation_context, current_subject, recent_history):
     """Generate progressive Casto Travel responses."""
-    return f"""I'm continuing our discussion about {current_subject}. 
-
-Based on what we've covered so far, what specific aspect would you like me to elaborate on? I want to make sure you get all the information you need about Casto Travel Philippines."""
+    return """Based on what we've covered so far, what specific aspect would you like me to elaborate on? I want to make sure you get all the information you need about Casto Travel Philippines."""
 
 def generate_general_progressive_response(user_input, conversation_context, current_subject, recent_history):
     """Generate progressive responses for general conversations."""
-    return f"""I'm continuing our conversation about {current_subject}. 
-
-To provide you with the most helpful information, could you tell me more about what specific aspect you'd like to explore or what questions you still have?"""
+    return """To provide you with the most helpful information, could you tell me more about what specific aspect you'd like to explore or what questions you still have?"""
 
 def handle_it_troubleshooting(user_input, conversation_context):
     """Handle IT troubleshooting questions with context awareness."""
