@@ -43,6 +43,10 @@ session.headers.update({
 def get_cached_knowledge():
     """Cache knowledge retrieval to avoid repeated queries"""
     try:
+        # For Vercel deployment, the knowledge base might not be available
+        # Return empty list to prevent crashes
+        logging.info("Attempting to load knowledge base...")
+        
         # Try multiple possible paths for Vercel deployment
         possible_paths = [
             'knowledge_base.json',
@@ -53,17 +57,21 @@ def get_cached_knowledge():
         
         for path in possible_paths:
             try:
+                logging.info(f"Trying path: {path}")
                 with open(path, 'r', encoding='utf-8') as f:
                     import json
                     data = json.load(f)
-                    return [entry.get('content', '') for entry in data if entry.get('content')]
+                    entries = [entry.get('content', '') for entry in data if entry.get('content')]
+                    logging.info(f"Successfully loaded {len(entries)} knowledge entries from {path}")
+                    return entries
             except FileNotFoundError:
+                logging.info(f"File not found at {path}")
                 continue
             except Exception as e:
                 logging.error(f"Error reading {path}: {str(e)}")
                 continue
         
-        # If no file found, return empty list
+        # If no file found, return empty list and log warning
         logging.warning("No knowledge base file found, using empty knowledge base")
         return []
         
@@ -140,18 +148,7 @@ def chat():
         if knowledge_context:
             system_prompt += f"\n\nHere is some important knowledge you must always use when relevant:\n{knowledge_context}"
 
-        # Step 1: Check if the question is relevant to the website
-        website_keywords = ["CASTO", "mission", "vision", "services", "CEO", "about"]
-        website_data = None
-        if any(keyword.lower() in user_input.lower() for keyword in website_keywords):
-            logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
-            try:
-                website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
-            except Exception as e:
-                logging.error(f"Error fetching website data: {str(e)}")
-                website_data = None
-
-        # Step 2: Get a response from the chatbot
+        # Get a response from the chatbot
         try:
             logging.info("Fetching response from the chatbot.")
             response = client.chat.completions.create(
@@ -166,12 +163,7 @@ def chat():
             chatbot_message = response.choices[0].message.content
             logging.info("Answer fetched from the chatbot.")
 
-            # Combine the chatbot's response with the website's response
-            combined_response = chatbot_message
-            if website_data and "No relevant information found" not in website_data:
-                combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
-
-            return jsonify({"response": combined_response})
+            return jsonify({"response": chatbot_message})
         
         except Exception as e:
             logging.error(f"Error during chatbot response: {str(e)}")

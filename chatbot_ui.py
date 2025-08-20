@@ -26,6 +26,7 @@ from ctypes import wintypes
 import socket
 from urllib.parse import urlparse
 from config import get_backend_url, get_client_id, get_tenant_id, get_admin_email, get_teams_webhook_url, get_single_instance_enabled
+import logging
 
 MUTEX_NAME = "Global\\CASIAppMutex"
 
@@ -1752,22 +1753,16 @@ class ChatbotWidget(QWidget):
         if hasattr(self, 'message_pulse_timer') and self.message_pulse_timer.isActive():
             self.message_pulse_timer.stop()
         
-        # Find and remove typing indicator with fade effect
+        # Find and remove typing indicator immediately
         for i in range(self.chat_display_layout.count()):
             widget = self.chat_display_layout.itemAt(i).widget()
             if widget and widget.objectName() == "typing_indicator":
-                # Create fade out effect
-                fade_effect = QGraphicsOpacityEffect(widget)
-                widget.setGraphicsEffect(fade_effect)
-                
-                # Animate fade out
-                fade_animation = QPropertyAnimation(fade_effect, b"opacity")
-                fade_animation.setDuration(200)
-                fade_animation.setStartValue(1.0)
-                fade_animation.setEndValue(0.0)
-                fade_animation.finished.connect(widget.deleteLater)
-                fade_animation.start()
+                # Remove immediately without complex animations
+                widget.deleteLater()
+                logging.info("Typing indicator removed successfully")
                 break
+        else:
+            logging.warning("Typing indicator not found for removal")
 
     def get_last_user_message(self):
         # Returns the last user message from conversation_history, or None
