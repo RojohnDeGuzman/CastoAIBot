@@ -1756,7 +1756,7 @@ def check_casi_identity_question(user_input):
 
 def get_casi_identity_response():
     """Get CASI's standard identity response."""
-    return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
+    return """As **CASI**, I'm your specialized AI assistant for Casto Travel Philippines! 
 
 **CASI** stands for **"Casto Assistance & Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
 
