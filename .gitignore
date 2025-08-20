@@ -77,3 +77,4 @@ dist/
 # PyInstaller
 *.manifest
 *.spec
+.vercel

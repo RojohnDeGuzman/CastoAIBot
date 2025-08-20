@@ -9,8 +9,9 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import time
 from functools import lru_cache
-from duckduckgo_search import DDGS
-from newspaper import Article
+# Removed heavy dependencies for Vercel deployment
+# from duckduckgo_search import DDGS
+# from newspaper import Article
 
 # NOTE: Authentication has been temporarily disabled for testing purposes.
 # Authentication will be re-enabled once the Microsoft Graph API integration is working properly.
@@ -1454,59 +1455,54 @@ Is there a specific aspect you'd like to know more about?"""
     
     return follow_up_info
 
-def smart_web_search(query):
-    """Smart web search that automatically detects Casto vs general queries."""
-    try:
-        with DDGS() as ddgs:
-            # Detect if this is a Casto-related query
-            casto_keywords = [
-                "casto", "casto travel", "casto travel philippines", 
-                "maryles casto", "marc casto", "casto group",
-                "casto philippines", "casto travel agency"
-            ]
-            
-            user_query_lower = query.lower()
-            is_casto_query = any(keyword in user_query_lower for keyword in casto_keywords)
-            
-            # Build search query based on type
-            if is_casto_query:
-                # For Casto queries, focus on Casto-specific information
-                search_query = f"Casto Travel Philippines {query}"
-                search_type = "Casto-Focused"
-                logging.info(f"CASTO QUERY DETECTED: {query} -> {search_query}")
-            else:
-                # For general queries, search broadly
-                search_query = query
-                search_type = "General"
-                logging.info(f"GENERAL QUERY: {query}")
-            
-            # Perform the search
-            results = list(ddgs.text(search_query, max_results=5))
-            
-            if not results:
-                return None
-            
-            # Process and format results
-            formatted_results = []
-            for result in results:
-                formatted_results.append({
-                    'title': result.get('title', ''),
-                    'snippet': result.get('body', ''),
-                    'url': result.get('link', ''),
-                    'source': 'Web Search',
-                    'search_type': search_type,
-                    'original_query': query,
-                    'search_query_used': search_query
-                })
-            
-            return formatted_results
-    except Exception as e:
-        logging.error(f"Smart web search error: {e}")
-        return None
+# def smart_web_search(query):
+#     """Smart web search that automatically detects Casto vs general queries."""
+#     try:
+#         with DDGS() as ddgs:
+#             # Detect if this is a Casto-related query
+#             casto_keywords = [
+#                 "casto", "casto travel", "casto travel philippines", 
+#                 "maryles casto", "marc casto", "casto group",
+#                 "casto philippines", "casto travel agency"
+#             ]
+#             
+#             user_query_lower = query.lower()
+#             is_casto_query = any(keyword in user_query_lower for keyword in casto_keywords)
+#             
+#             # Build search query based on type
+#             if is_casto_query:
+#                 # For Casto queries, focus on Casto-specific information
+#                 search_query = f"Casto Travel Philippines {query}"
+#                 search_type = "Casto-Focused"
+#                 logging.info(f"CASTO QUERY DETECTED: {query} -> {search_query}")
+#             
+#             # Perform the search
+#             results = list(ddgs.text(search_query, max_results=5))
+#             
+#             if not results:
+#                 return None
+#             
+#             # Process and format results
+#             formatted_results = []
+#             for result in results:
+#                 formatted_results.append({
+#                     'title': result.get('title', ''),
+#                     'snippet': result.get('body', ''),
+#                     'url': result.get('link', ''),
+#                     'source': 'Web Search',
+#                     'search_type': search_type,
+#                     'original_query': query,
+#                     'search_query_used': search_query
+#                 })
+#             
+#             return formatted_results
+#     except Exception as e:
+#         logging.error(f"Smart web search error: {e}")
+#         return None
 
-def web_search_casto_info(query):
-    """Legacy function - now calls smart search for backward compatibility."""
-    return smart_web_search(query)
+# def web_search_casto_info(query):
+#     """Legacy function - now calls smart search for backward compatibility."""
+#     return smart_web_search(query)
 
 def fetch_enhanced_casto_info(query):
     """Fetch enhanced information from multiple Casto sources."""
@@ -1849,15 +1845,15 @@ def search_person_on_casto_website(person_name):
             })
 
         # Only if nothing from Casto
-        if not any(r['source'].startswith('Casto') for r in person_results):
-            web_search_results = smart_web_search(person_name)
-            if web_search_results:
-                person_results.append({
-                    'source': 'Web Search',
-                    'data': web_search_results,
-                    'found': True,
-                    'priority': 4
-                })
+        # if not any(r['source'].startswith('Casto') for r in person_results):
+        #     web_search_results = smart_web_search(person_name)
+        #     if web_search_results:
+        #         person_results.append({
+        #             'source': 'Web Search',
+        #             'data': web_search_results,
+        #             'found': True,
+        #             'priority': 4
+        #         })
 
         person_results.sort(key=lambda x: x.get('priority', 999))
         return person_results
@@ -2655,7 +2651,8 @@ def web_search():
             return jsonify({"error": "No query provided"}), 400
         
         # Perform smart web search
-        search_results = smart_web_search(query)
+        # search_results = smart_web_search(query)
+        search_results = None  # Temporarily disabled for Vercel deployment
         
         if search_results:
             # Determine search type for response
@@ -2700,34 +2697,41 @@ def general_web_search():
             return jsonify({"error": "No query provided"}), 400
         
         # Force general search mode
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=8))  # More results for general search
+        # with DDGS() as ddgs:
+        #     results = list(ddgs.text(query, max_results=8))  # More results for general search
             
-            if results:
-                formatted_results = []
-                for result in results:
-                    formatted_results.append({
-                        'title': result.get('title', ''),
-                        'snippet': result.get('body', ''),
-                        'url': result.get('link', ''),
-                        'source': 'General Web Search',
-                        'search_type': 'General',
-                        'original_query': query
-                    })
+        #     if results:
+        #         formatted_results = []
+        #         for result in results:
+        #             formatted_results.append({
+        #             'title': result.get('title', ''),
+        #             'snippet': result.get('body', ''),
+        #             'url': result.get('link', ''),
+        #             'source': 'General Web Search',
+        #             'search_type': 'General',
+        #             'original_query': query
+        #             })
                 
-                return jsonify({
-                    "success": True,
-                    "results": formatted_results,
-                    "query": query,
-                    "search_type": "General",
-                    "message": "General web search completed"
-                })
-            else:
-                return jsonify({
-                    "success": False,
-                    "message": "No general search results found",
-                    "query": query
-                })
+        #         return jsonify({
+        #             "success": True,
+        #             "results": formatted_results,
+        #             "query": query,
+        #             "search_type": "General",
+        #             "message": "General web search completed"
+        #         })
+        #     else:
+        #         return jsonify({
+        #             "success": False,
+        #             "message": "No general search results found",
+        #             "query": query
+        #         })
+        
+        # Temporarily disabled for Vercel deployment
+        return jsonify({
+            "success": False,
+            "message": "Web search temporarily disabled for deployment",
+            "query": query
+        })
     
     except Exception as e:
         logging.error(f"General web search error: {e}")
@@ -2745,7 +2749,8 @@ def knowledge_web_search():
             return jsonify({"error": "No query provided"}), 400
         
         # Use smart search for knowledge questions
-        search_results = smart_web_search(query)
+        # search_results = smart_web_search(query)
+        search_results = None  # Temporarily disabled for Vercel deployment
         
         if search_results:
             return jsonify({
