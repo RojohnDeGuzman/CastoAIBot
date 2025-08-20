@@ -2348,7 +2348,7 @@ For the most current and detailed information, please visit https://www.casto.co
         debug_messages.append(create_debug_message("AI_MODEL_FALLBACK", "Using AI model with strict KB instructions"))
 
         # Combine knowledge into a string
-        knowledge_context = "\n".join(knowledge_entries)
+        knowledge_context = "\n".join([f"Q: {entry.get('question', '')} A: {entry.get('answer', '')}" for entry in knowledge_entries])
         logging.info(f"Knowledge context length: {len(knowledge_context)} characters")
         logging.info(f"Knowledge context preview: {knowledge_context[:200]}...")
         
