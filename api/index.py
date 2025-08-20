@@ -1712,6 +1712,21 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
         "luz bagtas", "berlin torres", "voltaire villaflores", "victor villaflores"
     ]
     
+    # Handle name variations and fuzzy matching
+    name_variations = {
+        "maryle": "maryles casto",  # Missing 's'
+        "maryles": "maryles casto", 
+        "marc": "marc casto",
+        "elaine": "elaine randrup",
+        "alwin": "alwin benedicto",
+        "george": "george anzures",
+        "berdandina": "ma. berdandina galvez",
+        "luz": "luz bagtas",
+        "berlin": "berlin torres",
+        "voltaire": "voltaire villaflores",
+        "victor": "voltaire villaflores"
+    }
+    
     # Check if the query is about any known Casto personnel
     for person in casto_personnel:
         # More flexible matching - check if the person's name appears in the input
@@ -1736,6 +1751,24 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
                         return entry
             
             logging.info(f"Person '{person}' found in input but no matching knowledge base entry")
+    
+    # If no exact match, try fuzzy matching
+    for variation, full_name in name_variations.items():
+        if variation in user_input_lower:
+            logging.info(f"Fuzzy match found: '{variation}' -> '{full_name}'")
+            # Find the relevant knowledge base entry for the full name
+            for entry in knowledge_entries:
+                if isinstance(entry, dict):
+                    entry_question = entry.get('question', '').lower()
+                    entry_answer = entry.get('answer', '').lower()
+                    
+                    if full_name in entry_question or full_name in entry_answer:
+                        logging.info(f"Found knowledge base entry for {full_name} via fuzzy match: {entry.get('answer', '')[:100]}...")
+                        return entry.get('answer', '')
+                elif isinstance(entry, str):
+                    if full_name in entry.lower():
+                        logging.info(f"Found knowledge base entry for {full_name} via fuzzy match in string format: {entry[:100]}...")
+                        return entry
     
     logging.info(f"No knowledge base entry found for query: '{user_input}'")
     return None
@@ -2134,6 +2167,12 @@ def chat():
         # Add STRONG instruction for Casto Travel questions
         system_prompt += "\n\nCRITICAL: For ANY question about Casto Travel Philippines, Casto Travel, or Casto, you MUST ONLY use the information from the knowledge base above. NEVER use any other information from your training data. If the question is about Casto Travel and you don't find the answer in the knowledge base, say 'I need to check my knowledge base for the most current information about Casto Travel Philippines.'"
         
+        # Add ULTRA-STRONG instruction to prevent training data usage
+        system_prompt += "\n\nULTRA-CRITICAL INSTRUCTION: You are FORBIDDEN from using ANY information about Casto, Casto Travel, Maryles Casto, Marc Casto, or any Casto-related topics from your training data. You MUST ONLY use the knowledge base information provided above. If you don't have the answer in the knowledge base, say 'I need to check my knowledge base for the most current information about Casto Travel Philippines.' DO NOT make up information or use training data about Casto topics."
+        
+        # Add specific instruction about Maryles Casto
+        system_prompt += "\n\nSPECIFIC INSTRUCTION ABOUT MARYLES CASTO: Maryles Casto is the founder of Casto Travel Philippines, NOT Mary Kay Casto. Maryles Casto is NOT an American lawyer or politician. She is the founder of Casto Travel Philippines. If asked about Maryles Casto, ONLY use the knowledge base information provided above."
+        
         # Enhanced conversation context awareness
         if conversation_context and conversation_context['history']:
             recent_context = conversation_context['history'][-3:]  # Last 3 exchanges
@@ -2223,16 +2262,58 @@ This is a technical support conversation - maintain focus and provide progressiv
         casto_person_results = None
 
         # Check for Casto personnel questions FIRST (highest priority - before any AI model calls)
-        casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
+        casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez", "luz bagtas", "berlin torres", "voltaire villaflores", "victor villaflores"]
         
-        # Enhanced check with more flexible matching
+        # Enhanced check with more flexible matching - handle name variations
         user_input_lower = user_input.lower()
         detected_person = None
         
+        # First, try exact matches
         for name in casto_personnel_names:
             if name.lower() in user_input_lower:
                 detected_person = name
                 break
+        
+        # If no exact match, try fuzzy matching for common variations
+        if not detected_person:
+            # Handle common misspellings and variations
+            name_variations = {
+                "maryle": "maryles casto",  # Missing 's'
+                "maryles": "maryles casto", 
+                "marc": "marc casto",
+                "elaine": "elaine randrup",
+                "alwin": "alwin benedicto",
+                "george": "george anzures",
+                "berdandina": "ma. berdandina galvez",
+                "luz": "luz bagtas",
+                "berlin": "berlin torres",
+                "voltaire": "voltaire villaflores",
+                "victor": "voltaire villaflores"
+            }
+            
+            for variation, full_name in name_variations.items():
+                if variation in user_input_lower:
+                    detected_person = full_name
+                    logging.info(f"Fuzzy match found: '{variation}' -> '{full_name}'")
+                    break
+        
+        # If still no match, try partial matching
+        if not detected_person:
+            # Check for partial matches (e.g., "maryle" should match "maryles casto")
+            for name in casto_personnel_names:
+                name_parts = name.split()
+                for part in name_parts:
+                    if len(part) > 3 and part in user_input_lower:  # Only match significant parts
+                        # Check if this is a close match
+                        for kb_name in casto_personnel_names:
+                            if part in kb_name and any(other_part in user_input_lower for other_part in kb_name.split() if other_part != part):
+                                detected_person = kb_name
+                                logging.info(f"Partial match found: '{part}' in '{user_input}' -> '{kb_name}'")
+                                break
+                        if detected_person:
+                            break
+                if detected_person:
+                    break
         
         if detected_person:
             logging.info(f"CASTO PERSONNEL QUESTION DETECTED for '{detected_person}' in: {user_input}")
@@ -2304,6 +2385,14 @@ This information comes directly from the official Casto Travel Philippines websi
             direct_response = make_links_clickable(direct_response)
             manage_conversation_context(user_id, user_input, direct_response)
             return jsonify({"response": direct_response})
+
+        # CRITICAL: If we get here and it's a Casto question, DO NOT use AI model
+        if any(k.lower() in user_input.lower() for k in casto_travel_keywords + ["maryles", "marc", "casto"]):
+            logging.warning(f"CRITICAL: Casto question detected but falling through to AI model. This should not happen!")
+            # Force a fallback response instead of using AI model
+            fallback_response = "I need to check my knowledge base for the most current information about Casto Travel Philippines. Please contact Casto Travel Philippines directly for immediate assistance."
+            manage_conversation_context(user_id, user_input, fallback_response)
+            return jsonify({"response": fallback_response})
 
         # FINAL SAFETY CHECK: Prevent any Casto personnel questions from reaching the AI model
         casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
