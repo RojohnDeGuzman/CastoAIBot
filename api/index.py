@@ -1,124 +1,18 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from openai import OpenAI
-import requests
-from bs4 import BeautifulSoup
 import logging
 import time
 import os
-from functools import lru_cache
 
 app = Flask(__name__)
 CORS(app)
 
-# Get API key from environment variable
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY environment variable is required")
-
-# Setup OpenAI-style client for Groq
-client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=GROQ_API_KEY
-)
-
-# Define the website source
-WEBSITE_SOURCE = "https://www.travelpress.com/"
-
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Cache for website data
-website_cache = {}
-CACHE_DURATION = 300  # 5 minutes
-
-# HTTP session for connection pooling
-session = requests.Session()
-session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-})
-
-@lru_cache(maxsize=100)
-def get_cached_knowledge():
-    """Cache knowledge retrieval to avoid repeated queries"""
-    try:
-        # For Vercel deployment, the knowledge base might not be available
-        # Return empty list to prevent crashes
-        logging.info("Attempting to load knowledge base...")
-        
-        # Try multiple possible paths for Vercel deployment
-        possible_paths = [
-            'knowledge_base.json',
-            './knowledge_base.json',
-            '../knowledge_base.json',
-            'api/knowledge_base.json'
-        ]
-        
-        for path in possible_paths:
-            try:
-                logging.info(f"Trying path: {path}")
-                with open(path, 'r', encoding='utf-8') as f:
-                    import json
-                    data = json.load(f)
-                    entries = [entry.get('content', '') for entry in data if entry.get('content')]
-                    logging.info(f"Successfully loaded {len(entries)} knowledge entries from {path}")
-                    return entries
-            except FileNotFoundError:
-                logging.info(f"File not found at {path}")
-                continue
-            except Exception as e:
-                logging.error(f"Error reading {path}: {str(e)}")
-                continue
-        
-        # If no file found, return empty list and log warning
-        logging.warning("No knowledge base file found, using empty knowledge base")
-        return []
-        
-    except Exception as e:
-        logging.error(f"Error loading knowledge base: {str(e)}")
-        return []
-
-def fetch_website_data(url, query=None):
-    """Fetch and parse data from a website with caching."""
-    cache_key = f"{url}:{query}"
-    current_time = time.time()
-    
-    # Check cache first
-    if cache_key in website_cache:
-        cached_data, timestamp = website_cache[cache_key]
-        if current_time - timestamp < CACHE_DURATION:
-            return cached_data
-    
-    try:
-        response = session.get(url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Extract the title
-        title = soup.title.string if soup.title else "No title found"
-        
-        # Search for the query in all paragraphs
-        paragraphs = soup.find_all('p')
-        if query:
-            for paragraph in paragraphs:
-                if query.lower() in paragraph.get_text().lower():
-                    result = f"Title: {title}\nContent: {paragraph.get_text().strip()}"
-                    website_cache[cache_key] = (result, current_time)
-                    return result
-        
-        # If no relevant content is found, return a default message
-        result = f"Title: {title}\nContent: No relevant information found on the website."
-        website_cache[cache_key] = (result, current_time)
-        return result
-    except Exception as e:
-        error_msg = f"Error fetching website data: {str(e)}"
-        website_cache[cache_key] = (error_msg, current_time)
-        return error_msg
-
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Chat with the AI bot - simple and clean like your on-premise version"""
+    """Simple chat endpoint for testing - no external API calls"""
     try:
         logging.info("Chat endpoint called")
         
@@ -134,41 +28,21 @@ def chat():
         
         logging.info(f"Received message: {user_input}")
         
-        # Get knowledge base entries
-        try:
-            knowledge_entries = get_cached_knowledge()
-            logging.info(f"Loaded {len(knowledge_entries)} knowledge entries")
-        except Exception as e:
-            logging.error(f"Error loading knowledge base: {str(e)}")
-            knowledge_entries = []
+        # Simple response logic without external API
+        if "hello" in user_input.lower() or "hi" in user_input.lower():
+            response = "Hi there! I'm CASI! What can I do for you? 🎯"
+        elif "who is casi" in user_input.lower():
+            response = "Hello! I'm **CASI**, your AI virtual assistant. I'm here to help you with any questions or support you need! 😊"
+        elif "george anzures" in user_input.lower():
+            response = "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries."
+        elif "casto" in user_input.lower():
+            response = "CASTO Travel Philippines is a travel company. I can help you with information about our services, team, or any other questions you might have!"
+        else:
+            response = "I'm CASI, your helpful AI assistant! I'm here to help you with any questions or support you need. How can I assist you today? 😊"
         
-        # Combine knowledge into a single string
-        knowledge_context = "\n".join(knowledge_entries)
-        system_prompt = "You are a helpful assistant named CASI. You are friendly, professional, and always ready to help."
-        if knowledge_context:
-            system_prompt += f"\n\nHere is some important knowledge you must always use when relevant:\n{knowledge_context}"
-
-        # Get a response from the chatbot
-        try:
-            logging.info("Fetching response from the chatbot.")
-            response = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                temperature=0.7
-            )
-
-            chatbot_message = response.choices[0].message.content
-            logging.info("Answer fetched from the chatbot.")
-
-            return jsonify({"response": chatbot_message})
+        logging.info(f"Generated response: {response}")
+        return jsonify({"response": response})
         
-        except Exception as e:
-            logging.error(f"Error during chatbot response: {str(e)}")
-            return jsonify({"error": f"AI service error: {str(e)}"}), 500
-    
     except Exception as e:
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
@@ -177,8 +51,13 @@ def chat():
 def get_knowledge():
     """Get knowledge base entries"""
     try:
-        knowledge_entries = get_cached_knowledge()
-        return jsonify({"knowledge": knowledge_entries})
+        # Return some basic knowledge for testing
+        knowledge = [
+            "George Anzures is the IT Director with 25+ years of IT expertise",
+            "CASTO Travel Philippines provides travel services",
+            "CASI is your AI virtual assistant"
+        ]
+        return jsonify({"knowledge": knowledge})
     except Exception as e:
         logging.error(f"Error in get_knowledge: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -193,11 +72,15 @@ def search():
         if not query:
             return jsonify({"error": "No query provided"}), 400
         
-        knowledge_entries = get_cached_knowledge()
+        # Simple search through basic knowledge
+        knowledge = [
+            "George Anzures is the IT Director with 25+ years of IT expertise",
+            "CASTO Travel Philippines provides travel services",
+            "CASI is your AI virtual assistant"
+        ]
         
-        # Simple search through knowledge base
         results = []
-        for entry in knowledge_entries:
+        for entry in knowledge:
             if query.lower() in entry.lower():
                 results.append(entry)
         
@@ -212,7 +95,6 @@ def health_check():
     return jsonify({
         "status": "success",
         "message": "CASI Backend is running",
-        "api_key_configured": bool(GROQ_API_KEY),
         "endpoints": {
             "chat": "POST /chat - General chat",
             "knowledge": "GET /knowledge - Knowledge base",
@@ -225,16 +107,12 @@ def health_check():
 def test_endpoint():
     """Simple test endpoint for connectivity testing"""
     try:
-        # Test knowledge base loading
-        knowledge_entries = get_cached_knowledge()
-        
         return jsonify({
             "status": "success",
             "message": "Backend is reachable and responding",
             "timestamp": time.time(),
             "endpoint": "/test",
-            "knowledge_base_loaded": len(knowledge_entries),
-            "api_key_configured": bool(GROQ_API_KEY)
+            "note": "This is a simplified test backend"
         })
     except Exception as e:
         return jsonify({
@@ -245,9 +123,9 @@ def test_endpoint():
         }), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting CASI Backend Server...")
+    print("🚀 Starting CASI Test Backend Server...")
     print("✅ Server will run on http://localhost:5000")
-    print("✅ Simple and clean like your on-premise version")
+    print("✅ Simplified backend for testing - no external API calls")
     print("=" * 50)
     
     logging.info("✅ Backend is running at http://localhost:5000")
