@@ -1713,7 +1713,11 @@ How can I assist you today?"""
 
 def get_casi_name_only_response():
     """Get CASI's name-only response for casual mentions."""
-    return """Yes, I'm **CASI**! How can I help you today? 😊"""
+    return """My name is **CASI**! I'm your specialized AI assistant for Casto Travel Philippines. 
+
+**CASI** stands for "Casto Assistance & Support Intelligence" and I'm here to help you with any questions about Casto Travel Philippines, their services, leadership, and company details.
+
+How can I assist you today? 😊"""
 
 def get_casi_creator_response():
     """Get CASI's response about who created her."""
@@ -2312,7 +2316,7 @@ def chat():
         logging.info("=== Step 1.5: Checking for identity questions ===")
         debug_messages.append(create_debug_message("STEP_1.5_START", "Checking for identity questions"))
         
-        identity_keywords = ["what does casi stand for", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning", "what are you", "tell me about yourself"]
+        identity_keywords = ["what does casi stand for", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning", "what are you", "tell me about yourself", "name", "called", "call you", "what do they call you", "what should i call you", "how do i address you", "what's your title", "your title", "introduce yourself", "introduction"]
         if any(keyword in user_input.lower() for keyword in identity_keywords):
             logging.info(f"🎯 IDENTITY QUESTION DETECTED: {user_input}")
             debug_messages.append(create_debug_message("IDENTITY_DETECTED", f"Identity question: {user_input}"))
@@ -2325,12 +2329,16 @@ def chat():
                 if any(word in user_input.lower() for word in ["who", "person", "individual", "specifically"]):
                     identity_response = get_casi_specific_creator_response()
                     debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Specific creator (Rojohn)"))
+                elif any(word in user_input.lower() for word in ["name", "called", "call you", "address you", "title", "introduce", "introduction"]):
+                    # Name-related questions get priority
+                    identity_response = get_casi_name_only_response()
+                    debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Name and introduction"))
                 else:
                     identity_response = get_casi_creator_response()
                     debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General creator (Casto IT Department)"))
-            elif "name" in user_input.lower() or "who are you" in user_input.lower():
+            elif any(word in user_input.lower() for word in ["name", "called", "call you", "address you", "title", "introduce", "introduction"]) or "who are you" in user_input.lower():
                 identity_response = get_casi_name_only_response()
-                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Name only"))
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Name and introduction"))
             else:
                 identity_response = get_casi_identity_response()
                 debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General identity"))
