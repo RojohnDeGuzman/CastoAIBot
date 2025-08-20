@@ -3809,24 +3809,24 @@ def generate_context_aware_response(user_input, conversation_context, base_respo
     current_subject = conversation_context['current_subject']
     resolution_status = conversation_context.get('resolution_status', 'ongoing')
     
-    # Add contextual introduction based on conversation state
-    if resolution_status == 'ongoing':
-        if 'casto_personnel' in current_subject:
-            contextual_intro = f"Continuing our discussion about {current_subject.replace('casto_personnel_', '').replace('_', ' ')}..."
-        elif 'casto_company' in current_subject:
-            contextual_intro = f"Regarding {current_subject.replace('casto_company_', '').replace('_', ' ')}..."
-        elif 'travel_services' in current_subject:
-            contextual_intro = f"About {current_subject.replace('travel_services_', '').replace('_', ' ')}..."
-        else:
-            contextual_intro = f"Regarding {current_subject.replace('_', ' ')}..."
-        
-        # Check if this is a follow-up question
-        if is_follow_up_question(user_input, conversation_context.get('history', [])):
-            contextual_intro = f"{contextual_intro} To answer your follow-up question: "
-        else:
-            contextual_intro = f"{contextual_intro} "
-        
-        return f"{contextual_intro}{base_response}"
+    # Temporarily disable contextual intro to fix confusion
+    # if resolution_status == 'ongoing':
+    #     if 'casto_personnel' in current_subject:
+    #         contextual_intro = f"Continuing our discussion about {current_subject.replace('casto_personnel_', '').replace('_', ' ')}..."
+    #     elif 'casto_company' in current_subject:
+    #         contextual_intro = f"Regarding {current_subject.replace('casto_company_', '').replace('_', ' ')}..."
+    #     elif 'travel_services' in current_subject:
+    #         contextual_intro = f"About {current_subject.replace('travel_services_', '').replace('_', ' ')}..."
+    #     else:
+    #         contextual_intro = f"Regarding {current_subject.replace('_', ' ')}..."
+    #     
+    #     # Check if this is a follow-up question
+    #     if is_follow_up_question(user_input, conversation_context.get('history', [])):
+    #         contextual_intro = f"{contextual_intro} To answer your follow-up question: "
+    #     else:
+    #         contextual_intro = f"{contextual_intro} "
+    #     
+    #     return f"{contextual_intro}{base_response}"
     
     return base_response
 
