@@ -2430,7 +2430,7 @@ def chat():
                 print("="*80 + "\n")
             
             return jsonify({
-                "response": identity_response,
+                "response": contextual_identity_response,
                 "debug_info": debug_info,
                 "debug_messages": echo_debug_to_client(debug_messages)
             })
@@ -3627,14 +3627,16 @@ def should_continue_subject(user_input, conversation_context):
     
     # Check if input contains subject keywords (strongest indicator)
     subject_keywords = current_subject.split('_')  # Handle new format with underscores
-    if any(keyword in user_input_lower for keyword in subject_keywords):
-        logging.info(f"✅ Subject continuation: Keyword match '{keyword}' in '{current_subject}'")
-        return True
+    for keyword in subject_keywords:
+        if keyword in user_input_lower:
+            logging.info(f"✅ Subject continuation: Keyword match '{keyword}' in '{current_subject}'")
+            return True
     
     # Check for continuation phrases
-    if any(phrase in user_input_lower for phrase in continuation_indicators):
-        logging.info(f"✅ Subject continuation: Continuation indicator '{phrase}' detected")
-        return True
+    for phrase in continuation_indicators:
+        if phrase in user_input_lower:
+            logging.info(f"✅ Subject continuation: Continuation indicator '{phrase}' detected")
+            return True
     
     # Enhanced short response detection for follow-ups
     if len(user_input.split()) <= 5:
@@ -3660,9 +3662,10 @@ def should_continue_subject(user_input, conversation_context):
         "the company", "the person", "the service", "the travel", "the trip",
         "he", "she", "his", "her", "him", "the ceo", "the founder", "the team"
     ]
-    if any(pronoun in user_input_lower for pronoun in context_pronouns):
-        logging.info(f"✅ Subject continuation: Context pronoun '{pronoun}' detected")
-        return True
+    for pronoun in context_pronouns:
+        if pronoun in user_input_lower:
+            logging.info(f"✅ Subject continuation: Context pronoun '{pronoun}' detected")
+            return True
     
     # Check for time-based continuity (recent conversation)
     if conversation_context.get('last_updated'):
