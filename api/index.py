@@ -1250,6 +1250,18 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
         current_subject = conversation_context['current_subject']
         logging.info(f"GENERATING CONTEXTUAL RESPONSE for ongoing conversation about: {current_subject}")
         
+        # Check if this is a greeting that wasn't caught by intent analysis
+        greeting_words = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings']
+        if any(word in user_input_lower for word in greeting_words):
+            logging.info(f"GREETING DETECTED IN CONTEXT: {user_input}")
+            return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
+
+**CASI** stands for **"Casto Assistance & Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
+
+I'm here to help you with any questions you have about Casto Travel Philippines, and I can also assist with general knowledge and IT troubleshooting! 😊
+
+How can I assist you today?"""
+        
         # Handle follow-up questions for ongoing conversations
         if should_continue_subject(user_input, conversation_context):
             return generate_progressive_contextual_response(user_input, conversation_context, current_subject)
