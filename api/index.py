@@ -41,7 +41,7 @@ LOCAL_DEBUG_ECHO = True  # Set to True to echo debug info to client
 
 # Define the website sources
 WEBSITE_SOURCE = "https://www.travelpress.com/"
-CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
+CASTO_TRAVEL_WEBSITE = "https://www.casto.com.ph/"  # Fixed: was castotravel.ph
 CASTO_WEBSITE = "https://www.casto.com.ph/"
 CASTO_ABOUT_US = "https://www.casto.com.ph/about-us"
 
@@ -1733,28 +1733,46 @@ He designed me to be your specialized AI assistant for Casto Travel Philippines 
 
 def check_knowledge_base_for_person(user_input, knowledge_entries):
     """Check if we have knowledge base entries for specific people."""
-    user_input_lower = user_input.lower()
+    # Normalize user input - convert to lowercase and strip whitespace
+    user_input_lower = user_input.lower().strip()
     
     logging.info(f"🔍 Checking knowledge base for: '{user_input}'")
     logging.info(f"📊 Knowledge entries type: {type(knowledge_entries)}")
     logging.info(f"📊 Knowledge entries count: {len(knowledge_entries) if knowledge_entries else 0}")
-    logging.info(f"🔍 User input lower: '{user_input_lower}'")
+    logging.info(f"🔍 User input normalized: '{user_input_lower}'")
     
     # List of known Casto personnel from knowledge base with multiple variations
+    # All names are stored in lowercase for consistent matching
     casto_personnel = [
         "maryles casto", "marc casto", "elaine randrup", "alwin benedicto", 
         "george anzures", "ma. berdandina galvez", "berdandina galvez",
         "luz bagtas", "berlin torres", "voltaire villaflores", "victor villaflores"
     ]
     
-    # Handle name variations and fuzzy matching
+    # Enhanced name variations and fuzzy matching with case-insensitive support
     name_variations = {
+        # Maryles Casto variations
         "maryle": "maryles casto",  # Missing 's'
-        "maryles": "maryles casto", 
+        "maryles": "maryles casto",
+        "maryles casto": "maryles casto",
+        "MARYLES": "maryles casto",  # All caps
+        "MARYLE": "maryles casto",   # All caps missing 's'
+        
+        # Marc Casto variations
         "marc": "marc casto",
+        "marc casto": "marc casto",
+        "MARC": "marc casto",        # All caps
+        "MARC CASTO": "marc casto",  # All caps
+        
+        # George Anzures variations
+        "george": "george anzures",
+        "george anzures": "george anzures",
+        "GEORGE": "george anzures",      # All caps
+        "GEORGE ANZURES": "george anzures",  # All caps
+        
+        # Other personnel variations
         "elaine": "elaine randrup",
         "alwin": "alwin benedicto",
-        "george": "george anzures",
         "berdandina": "ma. berdandina galvez",
         "luz": "luz bagtas",
         "berlin": "berlin torres",
@@ -1784,9 +1802,10 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
             
             logging.warning(f"⚠️ Person '{person}' found in input but no matching KB entry")
     
-    # Step 2: Try fuzzy matching with name variations
+    # Step 2: Try fuzzy matching with name variations (case-insensitive)
     for variation, full_name in name_variations.items():
-        if variation in user_input_lower:
+        # Check both the lowercase variation and the original user input for variations
+        if variation in user_input_lower or variation.upper() in user_input.upper():
             logging.info(f"🔍 Fuzzy match: '{variation}' -> '{full_name}'")
             
             # Find the relevant knowledge base entry for the full name
@@ -1803,8 +1822,64 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
                         logging.info(f"🎯 Found KB entry for {full_name} via fuzzy match in string format: {entry[:100]}...")
                         return entry
     
-    # Step 3: Check for general Casto-related keywords
-    casto_keywords = ["casto", "travel", "philippines", "founder", "ceo", "company"]
+    # Step 2.5: Additional case-insensitive matching for common variations
+    # Handle cases like "WHO IS GEORGE ANZURES?" or "who is GEORGE ANZURES?"
+    for person in casto_personnel:
+        # Check if any part of the person's name appears in the user input (case-insensitive)
+        person_parts = person.split()
+        for part in person_parts:
+            if part in user_input_lower or part.upper() in user_input.upper():
+                logging.info(f"🔍 Partial name match: '{part}' from '{person}'")
+                
+                # Find the relevant knowledge base entry
+                for entry in knowledge_entries:
+                    if isinstance(entry, dict):
+                        entry_question = entry.get('question', '').lower()
+                        entry_answer = entry.get('answer', '').lower()
+                        
+                        if person in entry_question or person in entry_answer:
+                            logging.info(f"🎯 Found KB entry for {person} via partial match: {entry.get('answer', '')[:100]}...")
+                            return entry.get('answer', '')
+                    elif isinstance(entry, str):
+                        if person in entry.lower():
+                            logging.info(f"🎯 Found KB entry for {person} via partial match in string format: {entry[:100]}...")
+                            return entry
+    
+    # Step 3: Check for specific role queries (CEO, COO, etc.)
+    role_keywords = ["ceo", "chief executive", "chief executive officer", "coo", "chief operating", "president", "founder", "chairperson"]
+    if any(keyword in user_input_lower for keyword in role_keywords):
+        logging.info(f"🔍 Role-specific query detected: {[k for k in role_keywords if k in user_input_lower]}")
+        
+        # Priority 1: Look for CEO-specific questions first
+        if any(keyword in user_input_lower for keyword in ["ceo", "chief executive"]):
+            for entry in knowledge_entries:
+                if isinstance(entry, dict):
+                    entry_question = entry.get('question', '').lower()
+                    entry_answer = entry.get('answer', '').lower()
+                    
+                    # Look for CEO-specific entries
+                    if "ceo" in entry_question or "chief executive" in entry_question:
+                        logging.info(f"🎯 Found CEO-specific KB entry: {entry.get('answer', '')[:100]}...")
+                        return entry.get('answer', '')
+                    
+                    # Look for Marc Casto entries (current CEO)
+                    if "marc casto" in entry_answer and ("ceo" in user_input_lower or "chief" in user_input_lower):
+                        logging.info(f"🎯 Found Marc Casto CEO entry: {entry.get('answer', '')[:100]}...")
+                        return entry.get('answer', '')
+        
+        # Priority 2: Look for other role-specific entries
+        for entry in knowledge_entries:
+            if isinstance(entry, dict):
+                entry_question = entry.get('question', '').lower()
+                entry_answer = entry.get('answer', '').lower()
+                
+                # Check if this entry matches the role being asked about
+                if any(keyword in entry_question for keyword in role_keywords):
+                    logging.info(f"🎯 Found role-specific KB entry: {entry.get('answer', '')[:100]}...")
+                    return entry.get('answer', '')
+    
+    # Step 4: Check for general Casto-related keywords
+    casto_keywords = ["casto", "travel", "philippines", "company"]
     if any(keyword in user_input_lower for keyword in casto_keywords):
         logging.info(f"🔍 Casto-related query detected, searching KB for general info...")
         
