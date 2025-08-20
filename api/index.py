@@ -180,6 +180,58 @@ def get_cached_knowledge():
         {
             "question": "What is the leadership structure at Casto Travel?",
             "answer": "The leadership structure at Casto Travel Philippines includes: MARYLES CASTO as Founder & Chairperson, MARC CASTO as CEO, ELAINE RANDRUP as Vice President of Operations, ALWIN BENEDICTO, CPA as Chief Financial Officer, GEORGE ANZURES as IT Director, and MA. BERDANDINA GALVEZ as HR Director. This team provides strategic direction and operational excellence across all aspects of the company."
+        },
+        {
+            "question": "Who is Luz Bagtas?",
+            "answer": "LUZ BAGTAS is the President and Chief Operating Officer (COO) of Casto Travel Philippines. One of the longest serving members of Casto Travel Philippines, Luz is a CPA who served in various capacities in accounting and management information systems (MIS) at Casto U.S. before being transferred to the Philippines. Her in-depth knowledge of the U.S. travel agency accounting systems is unrivaled and gives her incredible insights into today's clients' accounting services."
+        },
+        {
+            "question": "Tell me about Luz Bagtas",
+            "answer": "LUZ BAGTAS is the President and Chief Operating Officer (COO) of Casto Travel Philippines. One of the longest serving members of Casto Travel Philippines, Luz is a CPA who served in various capacities in accounting and management information systems (MIS) at Casto U.S. before being transferred to the Philippines. Her in-depth knowledge of the U.S. travel agency accounting systems is unrivaled and gives her incredible insights into today's clients' accounting services."
+        },
+        {
+            "question": "Who is Berlin Torres?",
+            "answer": "BERLIN TORRES is the HR Director of Casto Travel Philippines. Berlin holds a bachelor's degree in Psychology and spent the last twenty years at BPO and technology firms such as Concentrix, Pearson Management, and Human Edge Software Technology. He is very well versed in recruitment, employee relations, employee engagement, mobility, payroll, health services, and HR operations."
+        },
+        {
+            "question": "Tell me about Berlin Torres",
+            "answer": "BERLIN TORRES is the HR Director of Casto Travel Philippines. Berlin holds a bachelor's degree in Psychology and spent the last twenty years at BPO and technology firms such as Concentrix, Pearson Management, and Human Edge Software Technology. He is very well versed in recruitment, employee relations, employee engagement, mobility, payroll, health services, and HR operations."
+        },
+        {
+            "question": "Who is Voltaire Villaflores?",
+            "answer": "VOLTAIRE 'VICTOR' VILLAFLORES is the Director of Casto University at Casto Travel Philippines. Victor started working in the BPO in 2005 with a travel account and has loved it ever since. He joined Casto Travel Philippines as a travel consultant in 2012. Educated in computer programming, he advanced his knowledge and skillset by joining the Systems Department, enhancing and creating GDS scripts, back-end setup, and programming to provide efficiency to agents, accounting, and clients. He then joined the training team where he created and re-designed training curricula. Being in the industry for over 17 years in different roles, he is currently the Director of Casto University where he aims to produce great talents for the travel industry."
+        },
+        {
+            "question": "Tell me about Victor Villaflores",
+            "answer": "VOLTAIRE 'VICTOR' VILLAFLORES is the Director of Casto University at Casto Travel Philippines. Victor started working in the BPO in 2005 with a travel account and has loved it ever since. He joined Casto Travel Philippines as a travel consultant in 2012. Educated in computer programming, he advanced his knowledge and skillset by joining the Systems Department, enhancing and creating GDS scripts, back-end setup, and programming to provide efficiency to agents, accounting, and clients. He then joined the training team where he created and re-designed training curricula. Being in the industry for over 17 years in different roles, he is currently the Director of Casto University where he aims to produce great talents for the travel industry."
+        },
+        {
+            "question": "Who is the COO of Casto Travel?",
+            "answer": "LUZ BAGTAS is the President and Chief Operating Officer (COO) of Casto Travel Philippines. One of the longest serving members of Casto Travel Philippines, Luz is a CPA who served in various capacities in accounting and management information systems (MIS) at Casto U.S. before being transferred to the Philippines. Her in-depth knowledge of the U.S. travel agency accounting systems is unrivaled and gives her incredible insights into today's clients' accounting services."
+        },
+        {
+            "question": "Who is the HR Director of Casto Travel?",
+            "answer": "BERLIN TORRES is the HR Director of Casto Travel Philippines. Berlin holds a bachelor's degree in Psychology and spent the last twenty years at BPO and technology firms such as Concentrix, Pearson Management, and Human Edge Software Technology. He is very well versed in recruitment, employee relations, employee engagement, mobility, payroll, health services, and HR operations."
+        },
+        {
+            "question": "Who is the Director of Casto University?",
+            "answer": "VOLTAIRE 'VICTOR' VILLAFLORES is the Director of Casto University at Casto Travel Philippines. Victor started working in the BPO in 2005 with a travel account and has loved it ever since. He joined Casto Travel Philippines as a travel consultant in 2012. Educated in computer programming, he advanced his knowledge and skillset by joining the Systems Department, enhancing and creating GDS scripts, back-end setup, and programming to provide efficiency to agents, accounting, and clients. He then joined the training team where he created and re-designed training curricula. Being in the industry for over 17 years in different roles, he is currently the Director of Casto University where he aims to produce great talents for the travel industry."
+        },
+        {
+            "question": "Who are the key leaders at Casto Travel Philippines?",
+            "answer": "The key leadership team at Casto Travel Philippines includes: MARYLES CASTO (Founder & Chairperson), MARC CASTO (CEO), LUZ BAGTAS (President and COO), ELAINE RANDRUP (Vice President of Operations), ALWIN BENEDICTO, CPA (Chief Financial Officer), BERLIN TORRES (HR Director), GEORGE ANZURES (IT Director), MA. BERDANDINA GALVEZ (HR Director), and VOLTAIRE 'VICTOR' VILLAFLORES (Director of Casto University). Each brings extensive experience and expertise to their respective roles, contributing to the company's continued success in the travel industry."
+        },
+        {
+            "question": "What is the leadership structure at Casto Travel?",
+            "answer": "The leadership structure at Casto Travel Philippines includes: MARYLES CASTO as Founder & Chairperson, MARC CASTO as CEO, LUZ BAGTAS as President and COO, ELAINE RANDRUP as Vice President of Operations, ALWIN BENEDICTO, CPA as Chief Financial Officer, BERLIN TORRES as HR Director, GEORGE ANZURES as IT Director, MA. BERDANDINA GALVEZ as HR Director, and VOLTAIRE 'VICTOR' VILLAFLORES as Director of Casto University. This team provides strategic direction and operational excellence across all aspects of the company."
+        },
+        {
+            "question": "What are Casto Travel's company values?",
+            "answer": "Casto Travel Philippines operates with the following core values: Own It (owning and resolving complaints), One Team (success contingent on everyone's success), Exceptional Service (delivering exceptional experiences), Continuous Improvement (striving to improve), Celebrate Success (recognizing achievements), Clients for Life (long-term commitment), Ethics in Travel (operating ethically), Creative Solutions (finding solutions to problems), Casto Professional (maintaining professionalism), and Kindness (leaving more kindness in the world)."
+        },
+        {
+            "question": "What is Casto University?",
+            "answer": "Casto University is Casto Travel Philippines' training and development division, led by Director Voltaire 'Victor' Villaflores. It aims to produce great talents for the travel industry through comprehensive training curricula, GDS scripts development, back-end setup, and programming. The university focuses on streamlining processes and timelines while providing efficiency to agents, accounting, and clients through enhanced training programs."
         }
     ]
     return embedded_knowledge
