@@ -595,8 +595,8 @@ Today, the company is part of the unified CASTO brand, combining Casto Travel Ph
 The current CEO is Marc Casto, who continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions.
 
 For the most current leadership information, please contact Casto Travel Philippines directly at https://www.casto.com.ph/"""
-                
-                return make_links_clickable(response_text)
+            
+            return make_links_clickable(response_text)
     
     # Check for company information
     if any(word in user_input_lower for word in ["what", "company", "business", "services"]):
@@ -668,8 +668,8 @@ This makes it one of the most certified travel agencies in the Philippines."""
 The company was founded by Maryles Casto and has been serving the travel industry for more than 35 years. They offer comprehensive travel services including domestic and international packages, hotel bookings, tours, travel insurance, and corporate travel management.
 
 For the most current and detailed information, please visit their official website: https://www.casto.com.ph/"""
-            
-            return make_links_clickable(response_text)
+        
+        return make_links_clickable(response_text)
     
     return None  # Let the AI model handle non-Casto questions
 
