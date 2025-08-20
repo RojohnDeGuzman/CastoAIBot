@@ -1845,13 +1845,13 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
             # Find the relevant knowledge base entry
             for entry in knowledge_entries:
                 if isinstance(entry, dict):
-                entry_question = entry.get('question', '').lower()
-                entry_answer = entry.get('answer', '').lower()
-                
-                # Check if person appears in question or answer
-                if person in entry_question or person in entry_answer:
+                    entry_question = entry.get('question', '').lower()
+                    entry_answer = entry.get('answer', '').lower()
+                    
+                    # Check if person appears in question or answer
+                    if person in entry_question or person in entry_answer:
                         logging.info(f"🎯 Found KB entry for {person}: {entry.get('answer', '')[:100]}...")
-                    return entry.get('answer', '')
+                        return entry.get('answer', '')
                 elif isinstance(entry, str):
                     if person in entry.lower():
                         logging.info(f"🎯 Found KB entry for {person} in string format: {entry[:100]}...")
@@ -2834,7 +2834,7 @@ This is a technical support conversation - maintain focus and provide progressiv
                         if detected_person:
                             break
                 if detected_person:
-                break
+                    break
         
         if detected_person:
             logging.info(f"CASTO PERSONNEL QUESTION DETECTED for '{detected_person}' in: {user_input}")
@@ -3517,11 +3517,11 @@ def general_web_search():
         #         })
         
         # Temporarily disabled for Vercel deployment
-                return jsonify({
-                    "success": False,
+        return jsonify({
+            "success": False,
             "message": "Web search temporarily disabled for deployment",
-                    "query": query
-                })
+            "query": query
+        })
     
     except Exception as e:
         logging.error(f"General web search error: {e}")
