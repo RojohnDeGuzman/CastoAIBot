@@ -606,7 +606,7 @@ For the most current leadership information, please contact Casto Travel Philipp
             if knowledge_response:
                 return f"""{knowledge_response}"""
             else:
-                response_text = """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+            response_text = """As CASI (Casto Assistance and Support Intelligence), I can tell you that based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company has been making its mark in the travel industry for more than 35 years. It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in Metro Manila, plus expansion to Bacolod City.
 
@@ -630,7 +630,7 @@ For more detailed information, visit their official website: https://www.casto.c
             if knowledge_response:
                 return f"""{knowledge_response}"""
             else:
-                return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
+            return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
 
 It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in the heart of Metro Manila. The company combines Casto Travel Philippines and MVC Solutions under the unified CASTO brand.
 
@@ -644,7 +644,7 @@ The company has expanded to bring highly skilled professionals to Bacolod City, 
             if knowledge_response:
                 return f"""{knowledge_response}"""
             else:
-                return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
+            return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
 
 • ISO 27001:2013 Certified by GICG and JAS-ANZ
 • International Air Transport Associated Accredited Agent
@@ -663,7 +663,7 @@ This makes it one of the most certified travel agencies in the Philippines."""
         if knowledge_response:
             return f"""{knowledge_response}"""
         else:
-            response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+        response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company was founded by Maryles Casto and has been serving the travel industry for more than 35 years. They offer comprehensive travel services including domestic and international packages, hotel bookings, tours, travel insurance, and corporate travel management.
 
@@ -1280,23 +1280,7 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
 
 I'm here to provide you with expert knowledge about Casto Travel Philippines, their services, leadership, and company details. How can I assist you today? 😊"""
     
-    # Handle CASI identity questions (highest priority)
-    if intent_analysis['intent'] == 'casi_identity':
-        logging.info(f"🎯 CASI IDENTITY INTENT DETECTED: {user_input}")
-        debug_messages.append(create_debug_message("INTENT_DETECTED", "CASI identity intent detected"))
-        
-        # Return appropriate CASI identity response
-        if "stand for" in user_input.lower() or "meaning" in user_input.lower():
-            return get_casi_identity_response()
-        elif "created" in user_input.lower() or "built" in user_input.lower() or "made" in user_input.lower():
-            if any(word in user_input.lower() for word in ["who", "person", "individual", "specifically"]):
-                return get_casi_specific_creator_response()
-            else:
-                return get_casi_creator_response()
-        elif any(word in user_input.lower() for word in ["name", "who are you", "introduce"]):
-            return get_casi_name_only_response()
-        else:
-            return get_casi_identity_response()
+
     
     # Handle farewells
     if intent_analysis['intent'] == 'farewell':
@@ -1861,13 +1845,13 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
             # Find the relevant knowledge base entry
             for entry in knowledge_entries:
                 if isinstance(entry, dict):
-                    entry_question = entry.get('question', '').lower()
-                    entry_answer = entry.get('answer', '').lower()
-                    
-                    # Check if person appears in question or answer
-                    if person in entry_question or person in entry_answer:
+                entry_question = entry.get('question', '').lower()
+                entry_answer = entry.get('answer', '').lower()
+                
+                # Check if person appears in question or answer
+                if person in entry_question or person in entry_answer:
                         logging.info(f"🎯 Found KB entry for {person}: {entry.get('answer', '')[:100]}...")
-                        return entry.get('answer', '')
+                    return entry.get('answer', '')
                 elif isinstance(entry, str):
                     if person in entry.lower():
                         logging.info(f"🎯 Found KB entry for {person} in string format: {entry[:100]}...")
@@ -2295,6 +2279,11 @@ def chat():
         conversation_context = conversation_memory.get(user_id, None)
         intent_analysis = understand_user_intent(user_input, conversation_context)
         
+        # Initialize debug message collection for client
+        debug_messages = []
+        debug_messages.append(create_debug_message("USER_QUERY", f"'{user_input}'"))
+        debug_messages.append(create_debug_message("KB_ENTRIES_LOADED", f"{len(knowledge_entries)} entries"))
+        
         # Check for CASI identity questions FIRST (highest priority)
         if intent_analysis.get('intent') == 'casi_identity':
             logging.info(f"🎯 CASI IDENTITY INTENT DETECTED: {user_input}")
@@ -2371,10 +2360,6 @@ def chat():
         logging.info(f"🔍 USER QUERY: '{user_input}'")
         logging.info(f"📊 KNOWLEDGE BASE ENTRIES: {len(knowledge_entries)} entries available")
         
-        # Initialize debug message collection for client
-        debug_messages = []
-        debug_messages.append(create_debug_message("USER_QUERY", f"'{user_input}'"))
-        debug_messages.append(create_debug_message("KB_ENTRIES_LOADED", f"{len(knowledge_entries)} entries"))
         debug_messages.append(create_debug_message("PROCESSING_START", "Starting knowledge base lookup"))
         
         # Step 1: Check knowledge base for direct answers
@@ -2849,7 +2834,7 @@ This is a technical support conversation - maintain focus and provide progressiv
                         if detected_person:
                             break
                 if detected_person:
-                    break
+                break
         
         if detected_person:
             logging.info(f"CASTO PERSONNEL QUESTION DETECTED for '{detected_person}' in: {user_input}")
@@ -3532,11 +3517,11 @@ def general_web_search():
         #         })
         
         # Temporarily disabled for Vercel deployment
-        return jsonify({
-            "success": False,
+                return jsonify({
+                    "success": False,
             "message": "Web search temporarily disabled for deployment",
-            "query": query
-        })
+                    "query": query
+                })
     
     except Exception as e:
         logging.error(f"General web search error: {e}")
