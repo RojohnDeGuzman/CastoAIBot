@@ -2275,14 +2275,14 @@ def chat():
         # Generate user ID for conversation tracking
         user_id = email or "anonymous"
         
-        # Analyze user intent and context
-        conversation_context = conversation_memory.get(user_id, None)
-        intent_analysis = understand_user_intent(user_input, conversation_context)
-        
-        # Initialize debug message collection for client
+        # Initialize debug message collection for client (at the very beginning)
         debug_messages = []
         debug_messages.append(create_debug_message("USER_QUERY", f"'{user_input}'"))
         debug_messages.append(create_debug_message("KB_ENTRIES_LOADED", f"{len(knowledge_entries)} entries"))
+        
+        # Analyze user intent and context
+        conversation_context = conversation_memory.get(user_id, None)
+        intent_analysis = understand_user_intent(user_input, conversation_context)
         
         # Check for CASI identity questions FIRST (highest priority)
         if intent_analysis.get('intent') == 'casi_identity':
