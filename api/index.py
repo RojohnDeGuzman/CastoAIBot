@@ -848,43 +848,79 @@ def extract_entities_from_text(text):
     return entities
 
 def extract_subject_from_input(user_input, conversation_context):
-    """Extract the main subject/topic from user input."""
-    # If we have an ongoing subject, check if this is related
+    """Extract the main subject/topic from user input with enhanced context awareness."""
+    user_input_lower = user_input.lower()
+    
+    # If we have an ongoing subject, check if this is related or continues it
     if conversation_context and conversation_context.get('current_subject'):
         if should_continue_subject(user_input, conversation_context):
             return conversation_context['current_subject']
     
-    # Extract new subject from input
-    user_input_lower = user_input.lower()
+    # Enhanced subject detection with more granular categories
+    # Casto Personnel & Leadership (highest priority)
+    casto_personnel = [
+        "maryles casto", "marc casto", "luz bagtas", "elaine randrup", 
+        "alwin benedicto", "george anzures", "berdandina galvez", 
+        "berlin torres", "voltaire villaflores", "victor villaflores",
+        "ceo", "founder", "president", "coo", "cfo", "hr director", "it director"
+    ]
     
-    # Travel-related subjects
-    travel_subjects = [
+    # Casto Company & Services
+    casto_company = [
+        "casto travel", "casto travel philippines", "company", "services", 
+        "about casto", "casto history", "casto team", "casto offerings",
+        "travel agency", "tourism company", "philippines travel"
+    ]
+    
+    # Travel & Tourism Services
+    travel_services = [
         "travel planning", "vacation", "trip", "booking", "hotel", "flight",
         "tour package", "travel insurance", "visa", "passport", "destination",
-        "itinerary", "budget", "accommodation", "transportation"
+        "itinerary", "budget", "accommodation", "transportation", "domestic travel",
+        "international travel", "business travel", "leisure travel"
     ]
     
-    # Casto-related subjects
-    casto_subjects = [
-        "casto travel", "company", "services", "personnel", "leadership",
-        "about casto", "casto history", "casto team", "casto offerings"
+    # CASI Identity & Technical
+    casi_identity = [
+        "casi", "your name", "who are you", "what are you", "what does casi stand for",
+        "who created you", "who built you", "your identity", "introduce yourself"
     ]
     
-    # Check for specific subjects
-    for subject in travel_subjects + casto_subjects:
+    # Check for specific subjects in priority order
+    for subject in casto_personnel:
         if subject in user_input_lower:
-            return subject
+            return f"casto_personnel_{subject.replace(' ', '_')}"
     
-    # Check for question words that indicate a new subject
-    question_words = ["what", "how", "when", "where", "why", "who"]
+    for subject in casto_company:
+        if subject in user_input_lower:
+            return f"casto_company_{subject.replace(' ', '_')}"
+    
+    for subject in travel_services:
+        if subject in user_input_lower:
+            return f"travel_services_{subject.replace(' ', '_')}"
+    
+    for subject in casi_identity:
+        if subject in user_input_lower:
+            return "casi_identity"
+    
+    # Enhanced question word analysis
+    question_words = ["what", "how", "when", "where", "why", "who", "which", "can you", "could you", "tell me"]
     if any(word in user_input_lower for word in question_words):
         # Extract the main topic after the question word
         words = user_input_lower.split()
         for i, word in enumerate(words):
             if word in question_words and i + 1 < len(words):
-                return " ".join(words[i+1:i+3])  # Take next 2 words as subject
+                # Take next 2-3 words as subject for better context
+                subject_words = words[i+1:i+4] if i + 4 <= len(words) else words[i+1:]
+                return " ".join(subject_words)
     
-    return "general inquiry"
+    # Check for continuation indicators
+    continuation_words = ["and", "also", "what about", "how about", "more", "details", "explain", "elaborate"]
+    if any(word in user_input_lower for word in continuation_words):
+        if conversation_context and conversation_context.get('current_subject'):
+            return conversation_context['current_subject']
+    
+    return "general_inquiry"
 
 def determine_conversation_focus(history):
     """Determine the main focus of the conversation based on history."""
@@ -2267,8 +2303,12 @@ def chat():
         if knowledge_response:
             logging.info(f"✅ KNOWLEDGE BASE MATCH FOUND: {knowledge_response[:100]}...")
             logging.info(f"🎯 SOURCE: Knowledge Base (Direct Match)")
-            response = f"""As CASI, {knowledge_response}"""
-            updated_context = manage_conversation_context(user_id, user_input, response)
+            
+            # Generate contextual response that references ongoing conversation
+            base_response = f"""As CASI, {knowledge_response}"""
+            contextual_response = generate_contextual_response(user_input, conversation_context, base_response)
+            
+            updated_context = manage_conversation_context(user_id, user_input, contextual_response)
             conversation_memory[user_id] = updated_context
             
             debug_messages.append(create_debug_message("RESPONSE_SOURCE", "Knowledge Base - Direct Match"))
@@ -2344,7 +2384,10 @@ def chat():
                 debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General identity"))
             
             logging.info(f"🎯 IDENTITY RESPONSE: {identity_response[:100]}...")
-            updated_context = manage_conversation_context(user_id, user_input, identity_response)
+            
+            # Generate contextual response for identity questions
+            contextual_identity_response = generate_contextual_response(user_input, conversation_context, identity_response)
+            updated_context = manage_conversation_context(user_id, user_input, contextual_identity_response)
             conversation_memory[user_id] = updated_context
             
             # Enhanced debug info for identity responses
@@ -3555,36 +3598,49 @@ def update_conversation_resolution(user_input, response, conversation_context):
 
 
 def should_continue_subject(user_input, conversation_context):
-    """Determine if we should continue with the current subject."""
+    """Enhanced determination if we should continue with the current subject."""
     if not conversation_context or not conversation_context.get('current_subject'):
         return False
     
-    # Check if user is asking for more details about current subject
     current_subject = conversation_context['current_subject'].lower()
     user_input_lower = user_input.lower()
     
-    # Continue if user asks for more details, clarification, or related questions
+    # Enhanced continuation indicators for better context awareness
     continuation_indicators = [
-        "more", "tell me more", "explain", "elaborate", "what about",
-        "how about", "can you", "could you", "please", "also",
-        "additionally", "furthermore", "besides", "other", "different",
-        "yes", "no", "okay", "ok", "sure", "alright", "good", "fine"
+        # Direct continuation requests
+        "more", "tell me more", "explain", "elaborate", "what about", "how about",
+        "can you", "could you", "please", "also", "additionally", "furthermore",
+        "besides", "other", "different", "similar", "like", "same",
+        
+        # Affirmative responses that continue conversation
+        "yes", "no", "okay", "ok", "sure", "alright", "good", "fine", "great",
+        "excellent", "perfect", "that's right", "correct", "exactly",
+        
+        # Follow-up questions
+        "why", "how", "when", "where", "which", "what else", "anything else",
+        "is there more", "do you have", "can you provide", "give me",
+        
+        # Clarification requests
+        "clarify", "clarification", "not clear", "confused", "understand",
+        "mean", "meaning", "what do you mean", "i don't get it"
     ]
     
-    # Check if input is related to current subject
-    subject_keywords = current_subject.split()
+    # Check if input contains subject keywords (strongest indicator)
+    subject_keywords = current_subject.split('_')  # Handle new format with underscores
     if any(keyword in user_input_lower for keyword in subject_keywords):
+        logging.info(f"✅ Subject continuation: Keyword match '{keyword}' in '{current_subject}'")
         return True
     
     # Check for continuation phrases
     if any(phrase in user_input_lower for phrase in continuation_indicators):
+        logging.info(f"✅ Subject continuation: Continuation indicator '{phrase}' detected")
         return True
     
-    # Check if this is a short response (likely a follow-up)
+    # Enhanced short response detection for follow-ups
     if len(user_input.split()) <= 5:
-        # Check if the current subject is IT troubleshooting or technical
-        if any(word in current_subject for word in ['mouse', 'keyboard', 'computer', 'troubleshooting', 'internet', 'connection']):
-            # Short responses in technical conversations are likely follow-ups
+        # Check if current subject is ongoing and unresolved
+        if conversation_context.get('resolution_status') == 'ongoing':
+            logging.info(f"✅ Subject continuation: Short response with ongoing subject")
             return True
     
     # Check if this is a response to a question we asked
@@ -3593,14 +3649,35 @@ def should_continue_subject(user_input, conversation_context):
         last_response = last_exchange.get('response', '')
         
         # If our last response asked a question, this is likely an answer
-        if any(word in last_response.lower() for word in ['what', 'how', 'when', 'where', 'why', 'which', 'do you', 'have you', 'can you']):
+        question_indicators = ['what', 'how', 'when', 'where', 'why', 'which', 'do you', 'have you', 'can you', 'could you', 'would you', 'tell me']
+        if any(word in last_response.lower() for word in question_indicators):
+            logging.info(f"✅ Subject continuation: Response to our question")
             return True
     
-    # Check for pronouns that refer to previous context
-    pronouns = ["it", "this", "that", "they", "them", "their", "the problem", "the issue", "the mouse", "the computer"]
-    if any(pronoun in user_input_lower for pronoun in pronouns):
+    # Enhanced pronoun detection for context continuity
+    context_pronouns = [
+        "it", "this", "that", "they", "them", "their", "the problem", "the issue",
+        "the company", "the person", "the service", "the travel", "the trip",
+        "he", "she", "his", "her", "him", "the ceo", "the founder", "the team"
+    ]
+    if any(pronoun in user_input_lower for pronoun in context_pronouns):
+        logging.info(f"✅ Subject continuation: Context pronoun '{pronoun}' detected")
         return True
     
+    # Check for time-based continuity (recent conversation)
+    if conversation_context.get('last_updated'):
+        time_since_last = time.time() - conversation_context['last_updated']
+        if time_since_last < 300:  # 5 minutes - likely same conversation
+            logging.info(f"✅ Subject continuation: Recent conversation ({time_since_last:.1f}s ago)")
+            return True
+    
+    # Check for unresolved issues that need continuation
+    if conversation_context.get('resolution_status') == 'ongoing':
+        if any(word in user_input_lower for word in ['help', 'problem', 'issue', 'trouble', 'difficulty', 'need', 'want']):
+            logging.info(f"✅ Subject continuation: Unresolved issue needs help")
+            return True
+    
+    logging.info(f"❌ Subject change detected: Input doesn't continue '{current_subject}'")
     return False
 
 def is_it_troubleshooting_conversation(user_input, conversation_context):
@@ -3650,6 +3727,72 @@ def maintain_it_troubleshooting_context(user_input, conversation_context):
             logging.info(f"Maintaining IT troubleshooting context: {current_subject}")
     
     return conversation_context
+
+def generate_contextual_response(user_input, conversation_context, base_response):
+    """Generate a contextual response that references ongoing conversation."""
+    if not conversation_context or not conversation_context.get('current_subject'):
+        return base_response
+    
+    current_subject = conversation_context['current_subject']
+    resolution_status = conversation_context.get('resolution_status', 'ongoing')
+    
+    # Add contextual introduction based on conversation state
+    if resolution_status == 'ongoing':
+        if 'casto_personnel' in current_subject:
+            contextual_intro = f"Continuing our discussion about {current_subject.replace('casto_personnel_', '').replace('_', ' ')}..."
+        elif 'casto_company' in current_subject:
+            contextual_intro = f"Regarding {current_subject.replace('casto_company_', '').replace('_', ' ')}..."
+        elif 'travel_services' in current_subject:
+            contextual_intro = f"About {current_subject.replace('travel_services_', '').replace('_', ' ')}..."
+        else:
+            contextual_intro = f"Regarding {current_subject.replace('_', ' ')}..."
+        
+        # Check if this is a follow-up question
+        if is_follow_up_question(user_input, conversation_context.get('history', [])):
+            contextual_intro = f"{contextual_intro} To answer your follow-up question: "
+        else:
+            contextual_intro = f"{contextual_intro} "
+        
+        return f"{contextual_intro}{base_response}"
+    
+    return base_response
+
+def detect_conversation_resolution(user_input, response, conversation_context):
+    """Enhanced detection of conversation resolution."""
+    if not conversation_context:
+        return "ongoing"
+    
+    current_subject = conversation_context.get('current_subject', '')
+    user_input_lower = user_input.lower()
+    
+    # Resolution indicators
+    resolution_indicators = [
+        "thank you", "thanks", "got it", "understood", "clear", "perfect",
+        "that's all", "that's it", "no more questions", "goodbye", "bye",
+        "resolved", "fixed", "solved", "working now", "problem solved"
+    ]
+    
+    # Check for resolution indicators
+    if any(indicator in user_input_lower for indicator in resolution_indicators):
+        logging.info(f"🎯 Conversation resolved: User indicated completion")
+        return "resolved"
+    
+    # Check if response provided complete information
+    if len(response) > 200 and any(word in response.lower() for word in ['complete', 'finished', 'all set', 'ready', 'done']):
+        logging.info(f"🎯 Conversation resolved: Response indicates completion")
+        return "resolved"
+    
+    # Check for new subject indicators
+    new_subject_indicators = [
+        "what about", "how about", "tell me about", "i want to know about",
+        "different topic", "another question", "by the way", "speaking of"
+    ]
+    
+    if any(indicator in user_input_lower for indicator in new_subject_indicators):
+        logging.info(f"🎯 New subject started: User indicated topic change")
+        return "new_subject"
+    
+    return "ongoing"
 
 @app.route("/test/kb", methods=["GET"])
 def test_knowledge_base():
