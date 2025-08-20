@@ -43,10 +43,30 @@ session.headers.update({
 def get_cached_knowledge():
     """Cache knowledge retrieval to avoid repeated queries"""
     try:
-        with open('knowledge_base.json', 'r', encoding='utf-8') as f:
-            import json
-            data = json.load(f)
-            return [entry.get('content', '') for entry in data if entry.get('content')]
+        # Try multiple possible paths for Vercel deployment
+        possible_paths = [
+            'knowledge_base.json',
+            './knowledge_base.json',
+            '../knowledge_base.json',
+            'api/knowledge_base.json'
+        ]
+        
+        for path in possible_paths:
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    import json
+                    data = json.load(f)
+                    return [entry.get('content', '') for entry in data if entry.get('content')]
+            except FileNotFoundError:
+                continue
+            except Exception as e:
+                logging.error(f"Error reading {path}: {str(e)}")
+                continue
+        
+        # If no file found, return empty list
+        logging.warning("No knowledge base file found, using empty knowledge base")
+        return []
+        
     except Exception as e:
         logging.error(f"Error loading knowledge base: {str(e)}")
         return []
@@ -95,12 +115,24 @@ def chat():
         logging.info("Chat endpoint called")
         
         data = request.json
+        if not data:
+            logging.error("No JSON data received")
+            return jsonify({"error": "No data received"}), 400
+            
         user_input = data.get("message", "")
+        if not user_input:
+            logging.error("No message in request")
+            return jsonify({"error": "No message provided"}), 400
         
         logging.info(f"Received message: {user_input}")
         
         # Get knowledge base entries
-        knowledge_entries = get_cached_knowledge()
+        try:
+            knowledge_entries = get_cached_knowledge()
+            logging.info(f"Loaded {len(knowledge_entries)} knowledge entries")
+        except Exception as e:
+            logging.error(f"Error loading knowledge base: {str(e)}")
+            knowledge_entries = []
         
         # Combine knowledge into a single string
         knowledge_context = "\n".join(knowledge_entries)
@@ -113,7 +145,11 @@ def chat():
         website_data = None
         if any(keyword.lower() in user_input.lower() for keyword in website_keywords):
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
-            website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
+            try:
+                website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
+            except Exception as e:
+                logging.error(f"Error fetching website data: {str(e)}")
+                website_data = None
 
         # Step 2: Get a response from the chatbot
         try:
@@ -139,11 +175,11 @@ def chat():
         
         except Exception as e:
             logging.error(f"Error during chatbot response: {str(e)}")
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"error": f"AI service error: {str(e)}"}), 500
     
     except Exception as e:
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 @app.route("/knowledge", methods=["GET"])
 def get_knowledge():
@@ -196,12 +232,25 @@ def health_check():
 @app.route("/test", methods=["GET"])
 def test_endpoint():
     """Simple test endpoint for connectivity testing"""
-    return jsonify({
-        "status": "success",
-        "message": "Backend is reachable and responding",
-        "timestamp": time.time(),
-        "endpoint": "/test"
-    })
+    try:
+        # Test knowledge base loading
+        knowledge_entries = get_cached_knowledge()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Backend is reachable and responding",
+            "timestamp": time.time(),
+            "endpoint": "/test",
+            "knowledge_base_loaded": len(knowledge_entries),
+            "api_key_configured": bool(GROQ_API_KEY)
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Backend error: {str(e)}",
+            "timestamp": time.time(),
+            "endpoint": "/test"
+        }), 500
 
 if __name__ == '__main__':
     print("🚀 Starting CASI Backend Server...")
