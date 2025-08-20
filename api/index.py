@@ -1134,7 +1134,22 @@ def understand_user_intent(user_input, conversation_context):
         "casto travel", "casto philippines", "casto group", "casto travel philippines"
     ]
     
-    # Check for specific person name searches SECOND (high priority)
+    # Check for CASI identity questions FIRST (highest priority - before person search)
+    casi_identity_patterns = [
+        "who is casi", "what is casi", "what does casi stand for", "casi stands for",
+        "who created casi", "who built casi", "who made casi", "casi meaning",
+        "what is casi", "who are you", "your name", "your identity", "tell me about yourself"
+    ]
+    
+    # Check if this is a CASI identity question
+    if any(pattern in user_input_lower for pattern in casi_identity_patterns):
+        return {
+            'intent': 'casi_identity',
+            'context_clues': ['casi_identity_inquiry'],
+            'is_follow_up': False
+        }
+    
+    # Check for specific person name searches THIRD (high priority)
     # This will catch queries like "Who is Elaine Randrup?" or "Is Alwin Benedicto mentioned?"
     person_search_patterns = [
         "who is", "is there", "do you know", "tell me about", "what about",
@@ -1264,6 +1279,24 @@ def generate_contextual_response(user_input, intent_analysis, conversation_conte
         return """Hello! I'm CASI, your specialized AI assistant for Casto Travel Philippines information. 
 
 I'm here to provide you with expert knowledge about Casto Travel Philippines, their services, leadership, and company details. How can I assist you today? 😊"""
+    
+    # Handle CASI identity questions (highest priority)
+    if intent_analysis['intent'] == 'casi_identity':
+        logging.info(f"🎯 CASI IDENTITY INTENT DETECTED: {user_input}")
+        debug_messages.append(create_debug_message("INTENT_DETECTED", "CASI identity intent detected"))
+        
+        # Return appropriate CASI identity response
+        if "stand for" in user_input.lower() or "meaning" in user_input.lower():
+            return get_casi_identity_response()
+        elif "created" in user_input.lower() or "built" in user_input.lower() or "made" in user_input.lower():
+            if any(word in user_input.lower() for word in ["who", "person", "individual", "specifically"]):
+                return get_casi_specific_creator_response()
+            else:
+                return get_casi_creator_response()
+        elif any(word in user_input.lower() for word in ["name", "who are you", "introduce"]):
+            return get_casi_name_only_response()
+        else:
+            return get_casi_identity_response()
     
     # Handle farewells
     if intent_analysis['intent'] == 'farewell':
@@ -2261,6 +2294,58 @@ def chat():
         # Analyze user intent and context
         conversation_context = conversation_memory.get(user_id, None)
         intent_analysis = understand_user_intent(user_input, conversation_context)
+        
+        # Check for CASI identity questions FIRST (highest priority)
+        if intent_analysis.get('intent') == 'casi_identity':
+            logging.info(f"🎯 CASI IDENTITY INTENT DETECTED: {user_input}")
+            debug_messages.append(create_debug_message("IDENTITY_DETECTED", f"CASI identity intent: {user_input}"))
+            
+            # Return appropriate CASI identity response
+            if "stand for" in user_input.lower() or "meaning" in user_input.lower():
+                identity_response = get_casi_identity_response()
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "What CASI stands for"))
+            elif "created" in user_input.lower() or "built" in user_input.lower() or "made" in user_input.lower():
+                if any(word in user_input.lower() for word in ["who", "person", "individual", "specifically"]):
+                    identity_response = get_casi_specific_creator_response()
+                    debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Specific creator (Rojohn)"))
+                else:
+                    identity_response = get_casi_creator_response()
+                    debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General creator (Casto IT Department)"))
+            elif any(word in user_input.lower() for word in ["name", "who are you", "introduce"]):
+                identity_response = get_casi_name_only_response()
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "Name and introduction"))
+            else:
+                identity_response = get_casi_identity_response()
+                debug_messages.append(create_debug_message("IDENTITY_RESPONSE", "General identity"))
+            
+            logging.info(f"🎯 IDENTITY RESPONSE: {identity_response[:100]}...")
+            
+            # Enhanced debug info for identity responses
+            debug_info = {
+                "source": "Identity System",
+                "confidence": "High (95%)",
+                "response_type": "Identity Question Response",
+                "processing_time": "0.0s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "identity_question_type": next((qtype for qtype in ["stand_for", "creator", "name", "general"] if any(phrase in user_input.lower() for phrase in {
+                    "stand_for": ["stand for", "meaning"],
+                    "creator": ["created", "built", "made", "developed"],
+                    "name": ["name", "who are you"],
+                    "general": ["what is", "what's", "what are you", "tell me about yourself"]
+                }[qtype])), "general"),
+                "search_method": "Identity Intent Detection + Pre-built Response",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Authoritative Identity Info",
+                "safety_check": "Identity Question Handled Directly"
+            }
+            
+            return jsonify({
+                "response": identity_response,
+                "debug_info": debug_info,
+                "debug_messages": echo_debug_to_client(debug_messages)
+            })
         
         # CRITICAL: Check if this is a follow-up to an ongoing conversation
         if conversation_context and conversation_context.get('current_subject') and conversation_context.get('current_subject') != 'general inquiry':
