@@ -1314,6 +1314,18 @@ If you have more questions in the future, feel free to ask. Have a great day! ðŸ
         logging.info(f"CASI CASUAL MENTION DETECTED: {user_input}")
         return get_casi_name_only_response()
     
+    # Check if this is a greeting that wasn't caught by intent analysis
+    greeting_words = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings']
+    if any(word in user_input_lower for word in greeting_words):
+        logging.info(f"GREETING DETECTED: {user_input}")
+        return """Hello! I'm **CASI** - your specialized AI assistant for Casto Travel Philippines! 
+
+**CASI** stands for **"Casto Assistance & Support Intelligence"** - I'm designed to provide expert information about Casto Travel Philippines, their services, leadership, and company details.
+
+I'm here to help you with any questions you have about Casto Travel Philippines, and I can also assist with general knowledge and IT troubleshooting! ðŸ˜Š
+
+How can I assist you today?"""
+    
     logging.info(f"NO CONTEXTUAL RESPONSE FOR: {user_input} - will use AI model")
     return None  # Let the main logic handle other cases
 
