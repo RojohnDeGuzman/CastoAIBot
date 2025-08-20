@@ -630,7 +630,7 @@ For more detailed information, visit their official website: https://www.casto.c
             if knowledge_response:
                 return f"""As CASI, {knowledge_response}"""
             else:
-            return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
+                return """Based on my knowledge base, Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. 
 
 It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in the heart of Metro Manila. The company combines Casto Travel Philippines and MVC Solutions under the unified CASTO brand.
 
@@ -644,7 +644,7 @@ The company has expanded to bring highly skilled professionals to Bacolod City, 
             if knowledge_response:
                 return f"""As CASI, {knowledge_response}"""
             else:
-            return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
+                return """Based on my knowledge base, Casto Travel Philippines holds multiple prestigious accreditations including:
 
 • ISO 27001:2013 Certified by GICG and JAS-ANZ
 • International Air Transport Associated Accredited Agent
@@ -663,13 +663,13 @@ This makes it one of the most certified travel agencies in the Philippines."""
         if knowledge_response:
             return f"""As CASI, {knowledge_response}"""
         else:
-        response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
+            response_text = """Based on my knowledge base, Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. 
 
 The company was founded by Maryles Casto and has been serving the travel industry for more than 35 years. They offer comprehensive travel services including domestic and international packages, hotel bookings, tours, travel insurance, and corporate travel management.
 
 For the most current and detailed information, please visit their official website: https://www.casto.com.ph/"""
-        
-        return make_links_clickable(response_text)
+            
+            return make_links_clickable(response_text)
     
     return None  # Let the AI model handle non-Casto questions
 
