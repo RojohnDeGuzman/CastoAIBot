@@ -70,11 +70,75 @@ def get_cached_knowledge():
     # For Vercel, return embedded knowledge base since we can't access local files
     embedded_knowledge = [
         {
+            "question": "How do I reset my password?",
+            "answer": "To reset your password, go to the login page and click on 'Forgot Password'. Follow the instructions sent to your email."
+        },
+        {
+            "question": "Why is my internet not working?",
+            "answer": "Check if the network cable is properly connected or restart your router. You can also run the Windows Network Troubleshooter."
+        },
+        {
+            "question": "How do I connect to the VPN?",
+            "answer": "Use the company VPN client and enter your credentials. Make sure you are connected to the internet before attempting to connect."
+        },
+        {
+            "question": "What is Casto Travel Philippines?",
+            "answer": "Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. They offer domestic and international travel packages, hotel bookings, tour packages, travel insurance, corporate travel management, and group travel arrangements."
+        },
+        {
+            "question": "What services does Casto Travel offer?",
+            "answer": "Casto Travel Philippines offers comprehensive travel services including domestic and international travel packages, hotel reservations, tour packages and excursions, travel insurance and documentation, corporate travel management, and group travel arrangements for both business and leisure travelers."
+        },
+        {
+            "question": "How can I contact Casto Travel Philippines?",
+            "answer": "You can contact Casto Travel Philippines through their official website at https://www.casto.com.ph/ or visit their office locations. They provide professional travel consultation and booking services for all your travel needs in the Philippines and abroad."
+        },
+        {
+            "question": "Who is the CEO of Casto Travel Philippines?",
+            "answer": "The current CEO of Casto Travel Philippines is Marc Casto. Maryles Casto is the founder, and Marc Casto continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions."
+        },
+        {
+            "question": "What is Casto Travel's company history?",
+            "answer": "Casto Travel Philippines has been making its mark in the travel industry for more than 35 years. It's a Filipino-owned business that began in California's Silicon Valley and now has two offices in Metro Manila, plus expansion to Bacolod City. The company combines Casto Travel Philippines and MVC Solutions under the unified CASTO brand."
+        },
+        {
+            "question": "What are Casto Travel's accreditations?",
+            "answer": "Casto Travel Philippines holds multiple prestigious accreditations including ISO 27001:2013 certification, IATA accreditation, ASTA membership, PCI-DSS certification, and is an accredited member of PTAA, PIATA, and PHILTOA - making it one of the most certified travel agencies in the Philippines."
+        },
+        {
+            "question": "Who is Ricardo Dickie Reyes?",
+            "answer": "I don't have information about Ricardo 'Dickie' Reyes in relation to Casto Travel Philippines. The founder of Casto Travel Philippines is Maryles Casto, and the current CEO is Marc Casto."
+        },
+        {
+            "question": "Who is the current CEO of Casto Travel?",
+            "answer": "The current CEO of Casto Travel Philippines is Marc Casto. He continues the family legacy of excellence in the travel industry, building upon the foundation established by founder Maryles Casto. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions."
+        },
+        {
+            "question": "Who is Marc Casto?",
+            "answer": "Marc Casto is the current CEO of Casto Travel Philippines. He is part of the Casto family legacy, continuing the tradition of excellence established by founder Maryles Casto. Under Marc Casto's leadership, the company continues to provide comprehensive travel services and maintain its position as one of the leading travel agencies in the Philippines."
+        },
+        {
+            "question": "Who is Michael S. Pastrana?",
+            "answer": "I don't have information about Michael S. Pastrana in relation to Casto Travel Philippines. The current CEO of Casto Travel Philippines is Marc Casto, and the founder is Maryles Casto."
+        },
+        {
+            "question": "Is Michael S. Pastrana the CEO of Casto Travel?",
+            "answer": "No, Michael S. Pastrana is not the CEO of Casto Travel Philippines. The current CEO is Marc Casto, and the founder is Maryles Casto."
+        },
+        {
             "question": "Who is Maryles Casto?",
             "answer": "MARYLES CASTO - Founder & Chairperson. After 40+ years of traversing through the travel industry's ebbs and flows; and changes in Silicon Valley, Maryles sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines, providing knowledge, insight, and inspiration in several capacities, including client interactions, organizing exclusive journeys, and steering the company with her leadership and strategic vision."
         },
         {
-            "question": "Who is Marc Casto?",
+            "question": "Tell me about Maryles Casto",
+            "answer": "MARYLES CASTO - Founder & Chairperson. After 40+ years of traversing through the travel industry's ebbs and flows; and changes in Silicon Valley, Maryles sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines, providing knowledge, insight, and inspiration in several capacities, including client interactions, organizing exclusive journeys, and steering the company with her leadership and strategic vision."
+        },
+        {
+            "question": "Who is the founder of Casto Travel?",
+            "answer": "MARYLES CASTO is the Founder & Chairperson of Casto Travel Philippines. After 40+ years of traversing through the travel industry's ebbs and flows; and changes in Silicon Valley, Maryles sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines, providing knowledge, insight, and inspiration in several capacities, including client interactions, organizing exclusive journeys, and steering the company with her leadership and strategic vision."
+        },
+        {
+            "question": "Tell me about Marc Casto",
             "answer": "MARC CASTO is the CEO of Casto Travel Philippines (CTP) as well as its holding company MVC Solutions (MVC). Marc is assiduously focused upon the strategy, execution, and operations of the company all while ensuring it is in accord with its financial, ethical, and social requirements. He is highly driven and consistently intent upon exceeding growth goals while investing in innovative solutions to propel the industry forwards. As one of the founding members of CTP and MVC, Marc was critical in the formation of the organizations and propelling its early success."
         },
         {
@@ -82,7 +146,15 @@ def get_cached_knowledge():
             "answer": "ELAINE RANDRUP is the Vice President of Operations at Casto Travel Philippines. Elaine, VP of Operations, leads our Travel and Fulfillment Center operations. Educated in Business Administration, Elaine found her passion for the travel industry beginning as a Travel Counselor for Peoplesupport and American Express Travel Singapore. Her move back to the Philippines brings Casto years of experience as a travel expert as well as client services and operations management."
         },
         {
+            "question": "Tell me about Elaine Randrup",
+            "answer": "ELAINE RANDRUP is the Vice President of Operations at Casto Travel Philippines. Elaine, VP of Operations, leads our Travel and Fulfillment Center operations. Educated in Business Administration, Elaine found her passion for the travel industry beginning as a Travel Counselor for Peoplesupport and American Express Travel Singapore. Her move back to the Philippines brings Casto years of experience as a travel expert as well as client services and operations management."
+        },
+        {
             "question": "Who is Alwin Benedicto?",
+            "answer": "ALWIN BENEDICTO, CPA is the Chief Financial Officer of Casto Travel Philippines. A Certified Public Accountant, duly accredited Public Accounting Practitioner by the Philippine Board of Accountancy, and accredited Tax Practitioner by the Bureau of Internal Revenue. Alwin brings more than 20 years of experience in the fields of Taxation, Financial Audits, Planning and Analysis, and different areas of Finance. Prior to joining Casto, he worked in leadership roles for different industries, including BPO/KPO (Innodata, Inc), FinTech (C88 Financial Technologies, Ltd), Supply Chain and Logistics (Ayala Corporation Logistics Group). He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances for Casto."
+        },
+        {
+            "question": "Tell me about Alwin Benedicto",
             "answer": "ALWIN BENEDICTO, CPA is the Chief Financial Officer of Casto Travel Philippines. A Certified Public Accountant, duly accredited Public Accounting Practitioner by the Philippine Board of Accountancy, and accredited Tax Practitioner by the Bureau of Internal Revenue. Alwin brings more than 20 years of experience in the fields of Taxation, Financial Audits, Planning and Analysis, and different areas of Finance. Prior to joining Casto, he worked in leadership roles for different industries, including BPO/KPO (Innodata, Inc), FinTech (C88 Financial Technologies, Ltd), Supply Chain and Logistics (Ayala Corporation Logistics Group). He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances for Casto."
         },
         {
@@ -90,16 +162,24 @@ def get_cached_knowledge():
             "answer": "GEORGE ANZURES is the IT Director of Casto Travel Philippines."
         },
         {
+            "question": "Tell me about George Anzures",
+            "answer": "GEORGE ANZURES is the IT Director of Casto Travel Philippines."
+        },
+        {
             "question": "Who is Ma. Berdandina Galvez?",
             "answer": "MA. BERDANDINA GALVEZ is the HR Director of Casto Travel Philippines."
         },
         {
-            "question": "What is Casto Travel Philippines?",
-            "answer": "Casto Travel Philippines is a leading travel and tourism company in the Philippines, part of the Casto Group. They offer domestic and international travel packages, hotel bookings, tour packages, travel insurance, corporate travel management, and group travel arrangements."
+            "question": "Tell me about Ma. Berdandina Galvez",
+            "answer": "MA. BERDANDINA GALVEZ is the HR Director of Casto Travel Philippines."
         },
         {
-            "question": "Who is the CEO of Casto Travel Philippines?",
-            "answer": "The current CEO of Casto Travel Philippines is Marc Casto. Maryles Casto is the founder, and Marc Casto continues the family legacy of excellence in the travel industry. The company is now part of the unified CASTO brand, combining Casto Travel Philippines and MVC Solutions."
+            "question": "Who are the key leaders at Casto Travel Philippines?",
+            "answer": "The key leadership team at Casto Travel Philippines includes: MARYLES CASTO (Founder & Chairperson), MARC CASTO (CEO), ELAINE RANDRUP (Vice President of Operations), ALWIN BENEDICTO, CPA (Chief Financial Officer), GEORGE ANZURES (IT Director), and MA. BERDANDINA GALVEZ (HR Director). Each brings extensive experience and expertise to their respective roles, contributing to the company's continued success in the travel industry."
+        },
+        {
+            "question": "What is the leadership structure at Casto Travel?",
+            "answer": "The leadership structure at Casto Travel Philippines includes: MARYLES CASTO as Founder & Chairperson, MARC CASTO as CEO, ELAINE RANDRUP as Vice President of Operations, ALWIN BENEDICTO, CPA as Chief Financial Officer, GEORGE ANZURES as IT Director, and MA. BERDANDINA GALVEZ as HR Director. This team provides strategic direction and operational excellence across all aspects of the company."
         }
     ]
     return embedded_knowledge

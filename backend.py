@@ -17,6 +17,7 @@ import queue, os
 import concurrent.futures
 from duckduckgo_search import DDGS
 from newspaper import Article
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -118,11 +119,30 @@ session.headers.update({
 
 @lru_cache(maxsize=100)
 def get_cached_knowledge():
-    """Cache knowledge retrieval to avoid repeated DB queries"""
-    with db_pool.get_connection() as conn:
-        c = conn.cursor()
-        c.execute("SELECT content FROM knowledge ORDER BY timestamp DESC")
-        return [row[0] for row in c.fetchall()]
+    """Cache knowledge retrieval to avoid repeated file reads"""
+    try:
+        # Load knowledge base from JSON file
+        with open('knowledge_base.json', 'r', encoding='utf-8') as f:
+            knowledge_data = json.load(f)
+        
+        # Convert the knowledge base entries to a format the system can use
+        knowledge_entries = []
+        for entry in knowledge_data:
+            # Combine question and answer for context
+            combined_content = f"Question: {entry['question']}\nAnswer: {entry['answer']}"
+            knowledge_entries.append(combined_content)
+        
+        logging.info(f"Loaded {len(knowledge_entries)} knowledge base entries from JSON file")
+        return knowledge_entries
+    except FileNotFoundError:
+        logging.error("knowledge_base.json file not found")
+        return []
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing knowledge_base.json: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Unexpected error loading knowledge base: {e}")
+        return []
 
 def fetch_website_data(url, query=None):
     """Fetch and parse data from a website with caching."""
@@ -997,15 +1017,15 @@ def create_casto_direct_response(user_input, knowledge_entries, website_data):
     # Check for incorrect CEO claims first
     is_incorrect_ceo, incorrect_name = check_incorrect_ceo_claims(user_input)
     if is_incorrect_ceo:
-            response_text = f"""As CASI, I can provide you with the correct information about Casto Travel Philippines leadership.
-    
-    Based on our knowledge base:
-    • **Founder**: Maryles Casto
-    • **Current CEO**: Marc Casto
-    
-    I don't have information about {incorrect_name.title()} in relation to Casto Travel Philippines."""
-    
-    return make_links_clickable(response_text)
+        response_text = f"""As CASI, I can provide you with the correct information about Casto Travel Philippines leadership.
+
+Based on our knowledge base:
+• **Founder**: Maryles Casto
+• **Current CEO**: Marc Casto
+
+I don't have information about {incorrect_name.title()} in relation to Casto Travel Philippines."""
+
+        return make_links_clickable(response_text)
     
     # Check for CEO/founder questions first
     if any(word in user_input_lower for word in ["ceo", "founder", "who", "leader"]):
@@ -1132,6 +1152,27 @@ def get_knowledge():
     
     return jsonify([{"id": r[0], "timestamp": r[1], "content": r[2]} for r in rows])
 
+@app.route("/debug/knowledge", methods=["GET"])
+@limiter.limit("10 per minute")
+def debug_knowledge():
+    """Debug endpoint to check knowledge base status"""
+    try:
+        knowledge_entries = get_cached_knowledge()
+        return jsonify({
+            "status": "success",
+            "knowledge_entries_count": len(knowledge_entries),
+            "knowledge_loaded": len(knowledge_entries) > 0,
+            "sample_entries": knowledge_entries[:3] if knowledge_entries else [],
+            "file_exists": os.path.exists('knowledge_base.json'),
+            "file_size": os.path.getsize('knowledge_base.json') if os.path.exists('knowledge_base.json') else 0
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "knowledge_loaded": False
+        })
+
 @app.route("/chat", methods=["POST"])
 @limiter.limit("60 per minute")
 def chat():
@@ -1144,6 +1185,7 @@ def chat():
 
     # Use cached knowledge retrieval
     knowledge_entries = get_cached_knowledge()
+    logging.info(f"Chat endpoint: Loaded {len(knowledge_entries)} knowledge base entries")
     
     # Generate user ID for conversation tracking
     user_id = email or "anonymous"
@@ -1155,12 +1197,18 @@ def chat():
     # Try to generate contextual response first
     contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
     if contextual_response:
+        logging.info("Using contextual response from knowledge base")
         # Manage conversation context
         manage_conversation_context(user_id, user_input, contextual_response)
         return jsonify({"response": contextual_response})
 
     # Combine knowledge into a single string
     knowledge_context = "\n".join(knowledge_entries)
+    logging.info(f"Knowledge context length: {len(knowledge_context)} characters")
+    
+    if not knowledge_context:
+        logging.warning("No knowledge base content available - this may cause issues")
+    
     system_prompt = """You are CASI, a specialized AI assistant designed to provide expert information about Casto Travel Philippines and related services.
 
 IMPORTANT IDENTITY: You should introduce yourself as "CASI" in your responses. Only explain what CASI stands for ("Casto Assistance and Support Intelligence") when someone specifically asks what CASI means or stands for."""
@@ -1321,7 +1369,7 @@ This information comes directly from the official Casto Travel Philippines websi
         # If not a Casto question or no direct response, use AI model
         logging.info("Fetching response from the chatbot.")
         response = client.chat.completions.create(
-            model="Mixtral-8x7b-32768",  # Upgraded to more powerful 70B model
+            model="Mixtral-8x7b-32768",  
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
@@ -1499,9 +1547,9 @@ def cleanup():
     website_cache.clear()
 
 if __name__ == '__main__':
-    logging.info("✅ Backend is running at http://172.16.11.69:9000")
+    logging.info("✅ Backend is running at http://localhost:9000")
     try:
-        serve(app, host='172.16.11.69', port=9000)
+        serve(app, host='localhost', port=9000)
     except KeyboardInterrupt:
         cleanup()
         logging.info("Backend shutdown complete")
