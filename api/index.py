@@ -534,8 +534,8 @@ I don't have information about {incorrect_name.title()} in relation to Casto Tra
     # Check for CEO/founder questions first
     if any(word in user_input_lower for word in ["ceo", "founder", "who", "leader"]):
         if "casto" in user_input_lower:
-            # Special handling for "who is maryles casto" questions
-            if "maryles" in user_input_lower:
+            # Special handling for "who is maryles casto" questions (including variations like "maryle")
+            if any(name in user_input_lower for name in ["maryles", "maryle", "maryl"]):
                 # Use knowledge base instead of hardcoded response
                 knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
                 if knowledge_response:
