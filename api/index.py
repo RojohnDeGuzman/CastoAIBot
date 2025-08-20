@@ -2993,7 +2993,7 @@ def test_knowledge_base():
                 "test_query": test_query,
                 "test_result_found": bool(test_result),
                 "test_result": test_result[:200] if test_result else None,
-                "knowledge_context_sample": "\n".join(knowledge_entries)[:300] if knowledge_entries else None
+                "knowledge_context_sample": "\n".join([f"Q: {entry.get('question', '')} A: {entry.get('answer', '')}" for entry in knowledge_entries])[:300] if knowledge_entries else None
             }
         })
     except Exception as e:
