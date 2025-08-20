@@ -1701,9 +1701,9 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
     """Check if we have knowledge base entries for specific people."""
     user_input_lower = user_input.lower()
     
-    logging.info(f"Checking knowledge base for person in: '{user_input}'")
-    logging.info(f"Knowledge entries type: {type(knowledge_entries)}")
-    logging.info(f"Knowledge entries count: {len(knowledge_entries) if knowledge_entries else 0}")
+    logging.info(f"🔍 Checking knowledge base for: '{user_input}'")
+    logging.info(f"📊 Knowledge entries type: {type(knowledge_entries)}")
+    logging.info(f"📊 Knowledge entries count: {len(knowledge_entries) if knowledge_entries else 0}")
     
     # List of known Casto personnel from knowledge base with multiple variations
     casto_personnel = [
@@ -1727,35 +1727,33 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
         "victor": "voltaire villaflores"
     }
     
-    # Check if the query is about any known Casto personnel
+    # Step 1: Check for exact matches in casto_personnel
     for person in casto_personnel:
-        # More flexible matching - check if the person's name appears in the input
         if person in user_input_lower:
-            logging.info(f"Person '{person}' found in input: '{user_input}'")
+            logging.info(f"✅ Exact match found: '{person}' in '{user_input}'")
             
             # Find the relevant knowledge base entry
             for entry in knowledge_entries:
-                # Handle both dictionary and string formats
                 if isinstance(entry, dict):
                     entry_question = entry.get('question', '').lower()
                     entry_answer = entry.get('answer', '').lower()
                     
                     # Check if person appears in question or answer
                     if person in entry_question or person in entry_answer:
-                        logging.info(f"Found knowledge base entry for {person}: {entry.get('answer', '')[:100]}...")
+                        logging.info(f"🎯 Found KB entry for {person}: {entry.get('answer', '')[:100]}...")
                         return entry.get('answer', '')
                 elif isinstance(entry, str):
-                    # Handle string format (when knowledge base is joined as string)
                     if person in entry.lower():
-                        logging.info(f"Found knowledge base entry for {person} in string format: {entry[:100]}...")
+                        logging.info(f"🎯 Found KB entry for {person} in string format: {entry[:100]}...")
                         return entry
             
-            logging.info(f"Person '{person}' found in input but no matching knowledge base entry")
+            logging.warning(f"⚠️ Person '{person}' found in input but no matching KB entry")
     
-    # If no exact match, try fuzzy matching
+    # Step 2: Try fuzzy matching with name variations
     for variation, full_name in name_variations.items():
         if variation in user_input_lower:
-            logging.info(f"Fuzzy match found: '{variation}' -> '{full_name}'")
+            logging.info(f"🔍 Fuzzy match: '{variation}' -> '{full_name}'")
+            
             # Find the relevant knowledge base entry for the full name
             for entry in knowledge_entries:
                 if isinstance(entry, dict):
@@ -1763,14 +1761,30 @@ def check_knowledge_base_for_person(user_input, knowledge_entries):
                     entry_answer = entry.get('answer', '').lower()
                     
                     if full_name in entry_question or full_name in entry_answer:
-                        logging.info(f"Found knowledge base entry for {full_name} via fuzzy match: {entry.get('answer', '')[:100]}...")
+                        logging.info(f"🎯 Found KB entry for {full_name} via fuzzy match: {entry.get('answer', '')[:100]}...")
                         return entry.get('answer', '')
                 elif isinstance(entry, str):
                     if full_name in entry.lower():
-                        logging.info(f"Found knowledge base entry for {full_name} via fuzzy match in string format: {entry[:100]}...")
+                        logging.info(f"🎯 Found KB entry for {full_name} via fuzzy match in string format: {entry[:100]}...")
                         return entry
     
-    logging.info(f"No knowledge base entry found for query: '{user_input}'")
+    # Step 3: Check for general Casto-related keywords
+    casto_keywords = ["casto", "travel", "philippines", "founder", "ceo", "company"]
+    if any(keyword in user_input_lower for keyword in casto_keywords):
+        logging.info(f"🔍 Casto-related query detected, searching KB for general info...")
+        
+        # Look for general Casto information in knowledge base
+        for entry in knowledge_entries:
+            if isinstance(entry, dict):
+                entry_question = entry.get('question', '').lower()
+                entry_answer = entry.get('answer', '').lower()
+                
+                # Check if this is a general Casto question
+                if any(keyword in entry_question for keyword in casto_keywords):
+                    logging.info(f"🎯 Found general KB entry: {entry.get('answer', '')[:100]}...")
+                    return entry.get('answer', '')
+    
+    logging.info(f"❌ No knowledge base entry found for query: '{user_input}'")
     return None
 
 
@@ -2117,17 +2131,51 @@ def chat():
             else:
                 logging.info(f"NEW SUBJECT DETECTED: Switching from '{current_subject}' to new topic")
         
-        # Try to generate contextual response first
+        # NEW APPROACH: Always check knowledge base first, then Casto website, then AI model
+        logging.info("=== NEW APPROACH: Checking knowledge base first ===")
+        
+        # Step 1: Check knowledge base for direct answers
+        knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+        if knowledge_response:
+            logging.info(f"✅ KNOWLEDGE BASE MATCH FOUND: {knowledge_response[:100]}...")
+            response = f"""As CASI, {knowledge_response}"""
+            updated_context = manage_conversation_context(user_id, user_input, response)
+            conversation_memory[user_id] = updated_context
+            return jsonify({"response": response})
+        
+        # Step 2: If no KB match, check Casto website for additional info
+        logging.info("=== Step 2: Checking Casto website ===")
+        if any(keyword in user_input.lower() for keyword in ["casto", "maryles", "marc", "travel", "philippines"]):
+            logging.info("Casto-related query detected - checking website...")
+            try:
+                # Search Casto website for additional information
+                website_info = search_person_on_casto_website(user_input)
+                if website_info and any(result.get('found', False) for result in website_info):
+                    logging.info("✅ Website info found - combining with knowledge base")
+                    # Combine website info with knowledge base context
+                    combined_response = f"""As CASI, based on my knowledge base and current website information:
+
+{website_info[0].get('data', '')[:300]}...
+
+For the most current and detailed information, please visit https://www.casto.com.ph/ or contact Casto Travel Philippines directly."""
+                    
+                    updated_context = manage_conversation_context(user_id, user_input, combined_response)
+                    conversation_memory[user_id] = updated_context
+                    return jsonify({"response": combined_response})
+            except Exception as e:
+                logging.warning(f"Website search failed: {e}")
+        
+        # Step 3: If still no match, try contextual response
+        logging.info("=== Step 3: Trying contextual response ===")
         contextual_response = generate_contextual_response(user_input, intent_analysis, conversation_context, knowledge_entries)
         if contextual_response:
-            logging.info(f"CONTEXTUAL RESPONSE GENERATED: {contextual_response[:100]}...")
-            # Manage conversation context with enhanced tracking
+            logging.info(f"✅ CONTEXTUAL RESPONSE GENERATED: {contextual_response[:100]}...")
             updated_context = manage_conversation_context(user_id, user_input, contextual_response)
-            # Update the conversation memory with the enhanced context
             conversation_memory[user_id] = updated_context
             return jsonify({"response": contextual_response})
-        else:
-            logging.info("NO CONTEXTUAL RESPONSE - falling back to AI model")
+        
+        # Step 4: Last resort - AI model with strict knowledge base instructions
+        logging.info("=== Step 4: Falling back to AI model (last resort) ===")
 
         # Combine knowledge into a string
         knowledge_context = "\n".join(knowledge_entries)
