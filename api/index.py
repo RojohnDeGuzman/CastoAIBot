@@ -2417,7 +2417,7 @@ def chat():
                 print("="*80 + "\n")
             
             return jsonify({
-                "response": contextual_identity_response, 
+                "response": contextual_response, 
                 "debug_info": debug_info,
                 "debug_messages": echo_debug_to_client(debug_messages)
             })
