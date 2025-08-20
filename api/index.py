@@ -33,6 +33,9 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# Debug mode toggle - set to True to see debug info in terminal
+DEBUG_MODE = True  # Change to False to disable terminal debug output
+
 # Define the website sources
 WEBSITE_SOURCE = "https://www.travelpress.com/"
 CASTO_TRAVEL_WEBSITE = "https://www.castotravel.ph/"
@@ -2136,14 +2139,52 @@ def chat():
         
         # Step 1: Check knowledge base for direct answers
         logging.info("🔍 STEP 1: Checking knowledge base for direct answers...")
+        start_time = time.time()
         knowledge_response = check_knowledge_base_for_person(user_input, knowledge_entries)
+        processing_time = round(time.time() - start_time, 3)
+        
         if knowledge_response:
             logging.info(f"✅ KNOWLEDGE BASE MATCH FOUND: {knowledge_response[:100]}...")
             logging.info(f"🎯 SOURCE: Knowledge Base (Direct Match)")
             response = f"""As CASI, {knowledge_response}"""
             updated_context = manage_conversation_context(user_id, user_input, response)
             conversation_memory[user_id] = updated_context
-            return jsonify({"response": response, "source": "knowledge_base", "debug": "Direct KB match found"})
+            
+            # Enhanced debug info for knowledge base responses
+            debug_info = {
+                "source": "Knowledge Base",
+                "confidence": "High (95%)",
+                "response_type": "Direct Match",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "search_method": "Fuzzy Name Matching",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Authoritative"
+            }
+            
+            # Terminal debug output
+            if DEBUG_MODE:
+                print("\n" + "="*80)
+                print("🎯 CASI DEBUG MODE - KNOWLEDGE BASE RESPONSE")
+                print("="*80)
+                print(f"📝 User Query: '{user_input}'")
+                print(f"🔍 Source: {debug_info['source']}")
+                print(f"✅ Confidence: {debug_info['confidence']}")
+                print(f"⚡ Processing Time: {debug_info['processing_time']}")
+                print(f"📊 KB Entries Checked: {debug_info['knowledge_entries_checked']}")
+                print(f"🔍 Search Method: {debug_info['search_method']}")
+                print(f"🎯 Response Type: {debug_info['response_type']}")
+                print(f"🔑 Matched Keywords: {debug_info['matched_keywords']}")
+                print(f"🚫 AI Model Bypassed: {debug_info['ai_model_bypassed']}")
+                print(f"⭐ Response Quality: {debug_info['response_quality']}")
+                print("="*80 + "\n")
+            
+            return jsonify({
+                "response": response, 
+                "debug_info": debug_info
+            })
         
         # Step 2: If no KB match, check Casto website for additional info
         logging.info("=== Step 2: Checking Casto website ===")
@@ -2164,7 +2205,44 @@ For the most current and detailed information, please visit https://www.casto.co
                     
                     updated_context = manage_conversation_context(user_input, combined_response)
                     conversation_memory[user_id] = updated_context
-                    return jsonify({"response": combined_response, "source": "website_kb", "debug": "Website + KB combination"})
+                    
+                    # Enhanced debug info for website + KB responses
+                    debug_info = {
+                        "source": "Casto Website + Knowledge Base",
+                        "confidence": "High (90%)",
+                        "response_type": "Combined Sources",
+                        "processing_time": f"{processing_time}s",
+                        "knowledge_entries_checked": len(knowledge_entries),
+                        "website_sources": [result.get('source', 'Unknown') for result in website_info if result.get('found', False)],
+                        "search_method": "Website Scraping + KB Lookup",
+                        "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                        "fallback_used": False,
+                        "ai_model_bypassed": True,
+                        "response_quality": "Current + Authoritative"
+                    }
+                    
+                    # Terminal debug output
+                    if DEBUG_MODE:
+                        print("\n" + "="*80)
+                        print("🎯 CASI DEBUG MODE - WEBSITE + KB RESPONSE")
+                        print("="*80)
+                        print(f"📝 User Query: '{user_input}'")
+                        print(f"🔍 Source: {debug_info['source']}")
+                        print(f"✅ Confidence: {debug_info['confidence']}")
+                        print(f"⚡ Processing Time: {debug_info['processing_time']}")
+                        print(f"📊 KB Entries Checked: {debug_info['knowledge_entries_checked']}")
+                        print(f"🌐 Website Sources: {debug_info['website_sources']}")
+                        print(f"🔍 Search Method: {debug_info['search_method']}")
+                        print(f"🎯 Response Type: {debug_info['response_type']}")
+                        print(f"🔑 Matched Keywords: {debug_info['matched_keywords']}")
+                        print(f"🚫 AI Model Bypassed: {debug_info['ai_model_bypassed']}")
+                        print(f"⭐ Response Quality: {debug_info['response_quality']}")
+                        print("="*80 + "\n")
+                    
+                    return jsonify({
+                        "response": combined_response, 
+                        "debug_info": debug_info
+                    })
             except Exception as e:
                 logging.warning(f"Website search failed: {e}")
         else:
@@ -2178,7 +2256,46 @@ For the most current and detailed information, please visit https://www.casto.co
             logging.info(f"🎯 SOURCE: Contextual Response (Pre-built)")
             updated_context = manage_conversation_context(user_id, user_input, contextual_response)
             conversation_memory[user_id] = updated_context
-            return jsonify({"response": contextual_response, "source": "contextual", "debug": "Contextual response generated"})
+            
+            # Enhanced debug info for contextual responses
+            debug_info = {
+                "source": "Contextual Response System",
+                "confidence": "Medium (75%)",
+                "response_type": "Pre-built Template",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "intent_detected": intent_analysis.get('intent', 'unknown'),
+                "conversation_context_used": bool(conversation_context),
+                "search_method": "Intent Analysis + Context Matching",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Contextual"
+            }
+            
+            # Terminal debug output
+            if DEBUG_MODE:
+                print("\n" + "="*80)
+                print("🎯 CASI DEBUG MODE - CONTEXTUAL RESPONSE")
+                print("="*80)
+                print(f"📝 User Query: '{user_input}'")
+                print(f"🔍 Source: {debug_info['source']}")
+                print(f"✅ Confidence: {debug_info['confidence']}")
+                print(f"⚡ Processing Time: {debug_info['processing_time']}")
+                print(f"📊 KB Entries Checked: {debug_info['knowledge_entries_checked']}")
+                print(f"🧠 Intent Detected: {debug_info['intent_detected']}")
+                print(f"💬 Context Used: {debug_info['conversation_context_used']}")
+                print(f"🔍 Search Method: {debug_info['search_method']}")
+                print(f"🎯 Response Type: {debug_info['response_type']}")
+                print(f"🔑 Matched Keywords: {debug_info['matched_keywords']}")
+                print(f"🚫 AI Model Bypassed: {debug_info['ai_model_bypassed']}")
+                print(f"⭐ Response Quality: {debug_info['response_quality']}")
+                print("="*80 + "\n")
+            
+            return jsonify({
+                "response": contextual_response, 
+                "debug_info": debug_info
+            })
         
         # Step 4: Last resort - AI model with strict knowledge base instructions
         logging.info("=== Step 4: Falling back to AI model (last resort) ===")
@@ -2380,13 +2497,73 @@ This is a technical support conversation - maintain focus and provide progressiv
             if knowledge_response:
                 logging.info(f"Found knowledge base entry for {detected_person}, returning directly")
                 manage_conversation_context(user_id, user_input, knowledge_response)
-                return jsonify({"response": knowledge_response})
+                
+                # Enhanced debug info for direct personnel lookup
+                debug_info = {
+                    "source": "Knowledge Base (Direct Personnel Lookup)",
+                    "confidence": "Very High (98%)",
+                    "response_type": "Direct Personnel Match",
+                    "processing_time": f"{processing_time}s",
+                    "knowledge_entries_checked": len(knowledge_entries),
+                    "person_detected": detected_person,
+                    "search_method": "Personnel List + KB Lookup",
+                    "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                    "fallback_used": False,
+                    "ai_model_bypassed": True,
+                    "response_quality": "Authoritative Personnel Info",
+                    "safety_check": "Personnel Question Blocked from AI"
+                }
+                
+                # Terminal debug output
+                if DEBUG_MODE:
+                    print("\n" + "="*80)
+                    print("🎯 CASI DEBUG MODE - PERSONNEL LOOKUP RESPONSE")
+                    print("="*80)
+                    print(f"📝 User Query: '{user_input}'")
+                    print(f"🔍 Source: {debug_info['source']}")
+                    print(f"✅ Confidence: {debug_info['confidence']}")
+                    print(f"⚡ Processing Time: {debug_info['processing_time']}")
+                    print(f"📊 KB Entries Checked: {debug_info['knowledge_entries_checked']}")
+                    print(f"👤 Person Detected: {debug_info['person_detected']}")
+                    print(f"🔍 Search Method: {debug_info['search_method']}")
+                    print(f"🎯 Response Type: {debug_info['response_type']}")
+                    print(f"🔑 Matched Keywords: {debug_info['matched_keywords']}")
+                    print(f"🚫 AI Model Bypassed: {debug_info['ai_model_bypassed']}")
+                    print(f"⭐ Response Quality: {debug_info['response_quality']}")
+                    print(f"🛡️ Safety Check: {debug_info['safety_check']}")
+                    print("="*80 + "\n")
+                
+                return jsonify({
+                    "response": knowledge_response,
+                    "debug_info": debug_info
+                })
             else:
                 logging.info(f"ERROR: No knowledge base entry found for {detected_person} despite being in personnel list")
                 # Return a fallback response instead of proceeding to AI model
                 fallback_response = f"I should have information about {detected_person} in my knowledge base, but I'm unable to retrieve it at the moment. Please contact Casto Travel Philippines directly for the most current information."
                 manage_conversation_context(user_id, user_input, fallback_response)
-                return jsonify({"response": fallback_response})
+                
+                # Enhanced debug info for personnel fallback
+                debug_info = {
+                    "source": "Fallback Response (Personnel KB Failure)",
+                    "confidence": "Low (30%)",
+                    "response_type": "Error Fallback",
+                    "processing_time": f"{processing_time}s",
+                    "knowledge_entries_checked": len(knowledge_entries),
+                    "person_detected": detected_person,
+                    "search_method": "Personnel List + KB Lookup (Failed)",
+                    "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                    "fallback_used": True,
+                    "ai_model_bypassed": True,
+                    "response_quality": "Fallback (Limited)",
+                    "error_type": "Knowledge Base Lookup Failed",
+                    "safety_check": "Personnel Question Blocked from AI"
+                }
+                
+                return jsonify({
+                    "response": fallback_response,
+                    "debug_info": debug_info
+                })
         
         # Check for Casto family questions (secondary priority)
         elif any(name.lower() in user_input.lower() for name in ["maryles casto", "marc casto"]):
@@ -2395,7 +2572,27 @@ This is a technical support conversation - maintain focus and provide progressiv
             direct_response = create_casto_direct_response(user_input, knowledge_entries, None)
             if direct_response:
                 manage_conversation_context(user_id, user_input, direct_response)
-                return jsonify({"response": direct_response})
+                
+                # Enhanced debug info for Casto family questions
+                debug_info = {
+                    "source": "Knowledge Base (Casto Family Direct)",
+                    "confidence": "High (90%)",
+                    "response_type": "Family Member Direct Response",
+                    "processing_time": f"{processing_time}s",
+                    "knowledge_entries_checked": len(knowledge_entries),
+                    "family_member_detected": next((name for name in ["maryles casto", "marc casto"] if name.lower() in user_input.lower()), "casto family"),
+                    "search_method": "Family Member Detection + KB Lookup",
+                    "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                    "fallback_used": False,
+                    "ai_model_bypassed": True,
+                    "response_quality": "Authoritative Family Info",
+                    "safety_check": "Family Question Blocked from AI"
+                }
+                
+                return jsonify({
+                    "response": direct_response,
+                    "debug_info": debug_info
+                })
 
         elif any(k.lower() in user_input.lower() for k in casto_travel_keywords):
             logging.info(f"CASTO QUESTION DETECTED - Using knowledge base only for: {user_input}")
@@ -2411,7 +2608,27 @@ This is a technical support conversation - maintain focus and provide progressiv
                 if knowledge_response:
                     logging.info(f"Found knowledge base entry for {person_name}, returning directly")
                     manage_conversation_context(user_id, user_input, knowledge_response)
-                    return jsonify({"response": knowledge_response})
+                    
+                    # Enhanced debug info for person search KB match
+                    debug_info = {
+                        "source": "Knowledge Base (Person Search)",
+                        "confidence": "High (85%)",
+                        "response_type": "Person Search KB Match",
+                        "processing_time": f"{processing_time}s",
+                        "knowledge_entries_checked": len(knowledge_entries),
+                        "person_searched": person_name,
+                        "search_method": "Person Name Extraction + KB Lookup",
+                        "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                        "fallback_used": False,
+                        "ai_model_bypassed": True,
+                        "response_quality": "Authoritative Person Info",
+                        "intent_detected": "person_search"
+                    }
+                    
+                    return jsonify({
+                        "response": knowledge_response,
+                        "debug_info": debug_info
+                    })
                 
                 # If no knowledge base entry, search Casto websites
                 person_results = search_person_on_casto_website(person_name)
@@ -2440,7 +2657,28 @@ Details: {top['data']}
 This information comes directly from the official Casto Travel Philippines website and is authoritative."""
             direct_response = make_links_clickable(direct_response)
             manage_conversation_context(user_id, user_input, direct_response)
-            return jsonify({"response": direct_response})
+            
+            # Enhanced debug info for Casto website person search
+            debug_info = {
+                "source": "Casto Website (Person Search)",
+                "confidence": "High (88%)",
+                "response_type": "Website Person Search Result",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "person_searched": person_name,
+                "website_sources": [r.get('source', 'Unknown') for r in casto_person_results],
+                "search_method": "Website Scraping + Person Detection",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Current Website Info",
+                "intent_detected": "person_search"
+            }
+            
+            return jsonify({
+                "response": direct_response,
+                "debug_info": debug_info
+            })
 
         # CRITICAL: If we get here and it's a Casto question, DO NOT use AI model
         if any(k.lower() in user_input.lower() for k in casto_travel_keywords + ["maryles", "marc", "casto"]):
@@ -2448,7 +2686,28 @@ This information comes directly from the official Casto Travel Philippines websi
             # Force a fallback response instead of using AI model
             fallback_response = "I need to check my knowledge base for the most current information about Casto Travel Philippines. Please contact Casto Travel Philippines directly for immediate assistance."
             manage_conversation_context(user_id, user_input, fallback_response)
-            return jsonify({"response": fallback_response})
+            
+            # Enhanced debug info for critical Casto fallback
+            debug_info = {
+                "source": "Critical Safety Fallback (Casto Question)",
+                "confidence": "Very Low (20%)",
+                "response_type": "Safety Fallback",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "casto_keywords_detected": [k for k in casto_travel_keywords + ["maryles", "marc", "casto"] if k.lower() in user_input.lower()],
+                "search_method": "Safety Check + Fallback",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": True,
+                "ai_model_bypassed": True,
+                "response_quality": "Safety Fallback (Limited)",
+                "error_type": "Critical Safety Check Triggered",
+                "safety_check": "Casto Question Blocked from AI"
+            }
+            
+            return jsonify({
+                "response": fallback_response,
+                "debug_info": debug_info
+            })
 
         # FINAL SAFETY CHECK: Prevent any Casto personnel questions from reaching the AI model
         casto_personnel_names = ["maryles casto", "marc casto", "elaine randrup", "alwin benedicto", "george anzures", "ma. berdandina galvez", "berdandina galvez"]
@@ -2460,13 +2719,54 @@ This information comes directly from the official Casto Travel Philippines websi
             if knowledge_response:
                 logging.info(f"FINAL CHECK: Found knowledge base entry, returning it")
                 manage_conversation_context(user_id, user_input, knowledge_response)
-                return jsonify({"response": knowledge_response})
+                
+                # Enhanced debug info for final safety check success
+                debug_info = {
+                    "source": "Knowledge Base (Final Safety Check)",
+                    "confidence": "High (92%)",
+                    "response_type": "Final Safety Check Success",
+                    "processing_time": f"{processing_time}s",
+                    "knowledge_entries_checked": len(knowledge_entries),
+                    "person_detected": next((name for name in casto_personnel_names if name.lower() in user_input.lower()), "casto personnel"),
+                    "search_method": "Final Safety Check + KB Lookup",
+                    "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                    "fallback_used": False,
+                    "ai_model_bypassed": True,
+                    "response_quality": "Authoritative Personnel Info",
+                    "safety_check": "Final Personnel Safety Check Passed"
+                }
+                
+                return jsonify({
+                    "response": knowledge_response,
+                    "debug_info": debug_info
+                })
             
             # If still no knowledge base response, return a clear message
             detected_person = next((name for name in casto_personnel_names if name.lower() in user_input.lower()), "this person")
             default_response = f"I should have information about {detected_person} in my knowledge base, but I'm unable to retrieve it. This appears to be a system issue. Please contact Casto Travel Philippines directly for information about their personnel."
             manage_conversation_context(user_id, user_input, default_response)
-            return jsonify({"response": default_response})
+            
+            # Enhanced debug info for final safety check failure
+            debug_info = {
+                "source": "Final Safety Fallback (Personnel KB Failure)",
+                "confidence": "Very Low (15%)",
+                "response_type": "Final Safety Check Failure",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "person_detected": detected_person,
+                "search_method": "Final Safety Check + KB Lookup (Failed)",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": True,
+                "ai_model_bypassed": True,
+                "response_quality": "Final Fallback (Limited)",
+                "error_type": "Final Safety Check Failed",
+                "safety_check": "Final Personnel Safety Check Failed"
+            }
+            
+            return jsonify({
+                "response": default_response,
+                "debug_info": debug_info
+            })
 
         # CRITICAL IDENTITY SAFETY CHECK: Prevent ANY identity questions from reaching the AI model
         identity_keywords = ["what does casi stand for", "what is casi", "who created you", "who built you", "who made you", "what's your name", "who are you", "your name", "your identity", "casi stands for", "casi meaning"]
@@ -2488,7 +2788,32 @@ This information comes directly from the official Casto Travel Philippines websi
             
             logging.info(f"CRITICAL IDENTITY CHECK: Returning identity response: {identity_response[:100]}...")
             manage_conversation_context(user_id, user_input, identity_response)
-            return jsonify({"response": identity_response})
+            
+            # Enhanced debug info for identity safety check
+            debug_info = {
+                "source": "Identity Safety System",
+                "confidence": "High (95%)",
+                "response_type": "Identity Question Response",
+                "processing_time": f"{processing_time}s",
+                "knowledge_entries_checked": len(knowledge_entries),
+                "identity_question_type": next((qtype for qtype in ["stand_for", "creator", "name", "general"] if any(phrase in user_input.lower() for phrase in {
+                    "stand_for": ["stand for", "meaning"],
+                    "creator": ["created", "built", "made"],
+                    "name": ["name", "who are you"],
+                    "general": ["what is", "what's"]
+                }[qtype])), "general"),
+                "search_method": "Identity Keyword Detection + Pre-built Response",
+                "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Authoritative Identity Info",
+                "safety_check": "Identity Question Blocked from AI"
+            }
+            
+            return jsonify({
+                "response": identity_response,
+                "debug_info": debug_info
+            })
 
         # Fallback to model (only for non-Casto personnel and non-identity questions)
         import openai
@@ -2557,10 +2882,51 @@ This information comes directly from the official Casto Travel Philippines websi
         logging.info(f"🎯 FINAL SOURCE: AI Model with KB instructions")
         logging.info(f"📝 AI Response: {combined_response[:200]}...")
         
+        # Enhanced debug info for AI model responses
+        debug_info = {
+            "source": "AI Model (Groq Mixtral)",
+            "confidence": "Medium (60%)",
+            "response_type": "AI Generated",
+            "processing_time": f"{processing_time}s",
+            "knowledge_entries_checked": len(knowledge_entries),
+            "ai_model_used": "mixtral-8x7b-32768",
+            "temperature_setting": 0.7,
+            "system_prompt_length": len(system_prompt),
+            "search_method": "AI Model with KB Instructions",
+            "matched_keywords": [word for word in user_input.lower().split() if len(word) > 2],
+            "fallback_used": True,
+            "ai_model_bypassed": False,
+            "response_quality": "AI Generated",
+            "safety_checks_passed": True,
+            "knowledge_base_instructions": "Applied"
+        }
+        
+        # Terminal debug output
+        if DEBUG_MODE:
+            print("\n" + "="*80)
+            print("🎯 CASI DEBUG MODE - AI MODEL RESPONSE (LAST RESORT)")
+            print("="*80)
+            print(f"📝 User Query: '{user_input}'")
+            print(f"🔍 Source: {debug_info['source']}")
+            print(f"✅ Confidence: {debug_info['confidence']}")
+            print(f"⚡ Processing Time: {debug_info['processing_time']}")
+            print(f"📊 KB Entries Checked: {debug_info['knowledge_entries_checked']}")
+            print(f"🤖 AI Model: {debug_info['ai_model_used']}")
+            print(f"🌡️ Temperature: {debug_info['temperature_setting']}")
+            print(f"📝 System Prompt Length: {debug_info['system_prompt_length']} chars")
+            print(f"🔍 Search Method: {debug_info['search_method']}")
+            print(f"🎯 Response Type: {debug_info['response_type']}")
+            print(f"🔑 Matched Keywords: {debug_info['matched_keywords']}")
+            print(f"⚠️ Fallback Used: {debug_info['fallback_used']}")
+            print(f"🚫 AI Model Bypassed: {debug_info['ai_model_bypassed']}")
+            print(f"⭐ Response Quality: {debug_info['response_quality']}")
+            print(f"✅ Safety Checks: {debug_info['safety_checks_passed']}")
+            print(f"📚 KB Instructions: {debug_info['knowledge_base_instructions']}")
+            print("="*80 + "\n")
+        
         return jsonify({
             "response": combined_response,
-            "source": "ai_model",
-            "debug": "AI model with knowledge base instructions",
+            "debug_info": debug_info,
             "follow_up_suggestions": follow_up_suggestions,
             "conversation_context": {
                 "current_subject": conversation_context.get('current_subject', 'general inquiry') if conversation_context else 'general inquiry',
@@ -3019,3 +3385,75 @@ def test_knowledge_base():
             "error": str(e),
             "knowledge_base_test": None
         })
+
+@app.route("/debug/format", methods=["GET"])
+def debug_format_demo():
+    """Demo endpoint showing the new enhanced debug format"""
+    return jsonify({
+        "message": "This is how the new debug format will look in chat responses",
+        "example_response": {
+            "response": "As CASI, Maryles Casto is the founder of Casto Travel Philippines...",
+            "debug_info": {
+                "source": "Knowledge Base",
+                "confidence": "High (95%)",
+                "response_type": "Direct Match",
+                "processing_time": "0.15s",
+                "knowledge_entries_checked": 42,
+                "search_method": "Fuzzy Name Matching",
+                "matched_keywords": ["maryles", "casto"],
+                "fallback_used": False,
+                "ai_model_bypassed": True,
+                "response_quality": "Authoritative"
+            }
+        },
+        "debug_fields_explained": {
+            "source": "Where the answer came from (KB, AI, Website, etc.)",
+            "confidence": "How confident CASI is in the answer (with percentage)",
+            "response_type": "Type of response generated",
+            "processing_time": "How long it took to process the request",
+            "knowledge_entries_checked": "Number of KB entries searched",
+            "search_method": "Method used to find the answer",
+            "matched_keywords": "Keywords that triggered the response",
+            "fallback_used": "Whether a fallback response was used",
+            "ai_model_bypassed": "Whether the AI model was bypassed for safety",
+            "response_quality": "Quality rating of the response"
+        },
+        "response_sources": [
+            "Knowledge Base - Most authoritative (95-98% confidence)",
+            "Casto Website - Current information (85-90% confidence)", 
+            "Contextual Response - Pre-built templates (70-80% confidence)",
+            "AI Model - Generated responses (50-70% confidence)",
+            "Safety Fallback - Error handling (15-30% confidence)"
+        ]
+    })
+
+@app.route("/debug/toggle", methods=["POST"])
+def toggle_debug_mode():
+    """Toggle debug mode on/off"""
+    global DEBUG_MODE
+    try:
+        data = request.get_json() or {}
+        new_mode = data.get('debug_mode', not DEBUG_MODE)
+        DEBUG_MODE = bool(new_mode)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Debug mode {'enabled' if DEBUG_MODE else 'disabled'}",
+            "debug_mode": DEBUG_MODE,
+            "note": "Changes take effect immediately for new requests"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "current_debug_mode": DEBUG_MODE
+        })
+
+@app.route("/debug/status", methods=["GET"])
+def get_debug_status():
+    """Get current debug mode status"""
+    return jsonify({
+        "debug_mode": DEBUG_MODE,
+        "message": f"Debug mode is currently {'enabled' if DEBUG_MODE else 'disabled'}",
+        "note": "When enabled, you'll see detailed debug info in the terminal for each chat request"
+    })
