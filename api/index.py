@@ -2861,23 +2861,41 @@ This information comes directly from the official Casto Travel Philippines websi
             })
 
         # Fallback to model (only for non-Casto personnel and non-identity questions)
-        import openai
         try:
-            client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+            # Use requests directly to call Groq API (no openai module needed)
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            groq_payload = {
+                "model": "mixtral-8x7b-32768",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input}
+                ],
+                "temperature": 0.7
+            }
+            
+            groq_response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=groq_payload,
+                timeout=30
+            )
+            
+            if groq_response.status_code != 200:
+                logging.error(f"Groq API error: {groq_response.status_code} - {groq_response.text}")
+                return jsonify({"error": f"Groq API error: {groq_response.status_code}"}), 500
+                
+            response_data = groq_response.json()
+            chatbot_message = response_data["choices"][0]["message"]["content"]
+            
         except Exception as e:
-            logging.error(f"Failed to create OpenAI client: {e}")
-            return jsonify({"error": f"Client initialization failed: {str(e)}"}), 500
+            logging.error(f"Failed to call Groq API: {e}")
+            return jsonify({"error": f"Groq API call failed: {str(e)}"}), 500
 
-        logging.info("Fetching response from Groq.")
-        response = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.7
-        )
-        chatbot_message = response.choices[0].message.content
+        logging.info("Groq API response received successfully.")
 
         # CRITICAL: Ensure response is contextual for ongoing conversations
         if conversation_context and conversation_context.get('current_subject') and conversation_context.get('current_subject') != 'general inquiry':
