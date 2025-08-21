@@ -47,17 +47,65 @@ session.headers.update({
 
 @lru_cache(maxsize=100)
 def get_cached_knowledge():
-    """Cache knowledge retrieval - simplified for Vercel"""
+    """Enhanced knowledge base with comprehensive information"""
     try:
-        # For Vercel, we'll use a simple knowledge base
+        # Comprehensive knowledge base for CASTO Travel
         knowledge = [
-            "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries.",
-            "CASTO Travel Philippines is a travel company providing various travel services.",
-            "CASI is your AI virtual assistant, always ready to help with any questions or support you need."
+            "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines. He previously served as Chief Technology Officer of Asiatrust Bank (later acquired by Asia United Bank) and held the position of Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. His leadership eventually expanded to a regional capacity, overseeing operations across five markets. He played a key role in establishing the IT backbone of several BPO startups in the Philippines, contributing to the successful launch of major contact centers such as Dell International Services, Genpact, and Arvato Bertelsmann. Beyond technical expertise, he is passionate about leadership development and considers his most significant accomplishment to be mentoring and coaching future technology leaders in the Philippines.",
+            "Ma. Berdandina Galvez is the HR Director of Casto Travel Philippines. She is an experienced Senior Human Resources professional with a demonstrated history of working in various industries such as hospitality, health care, educational, food service and transportation. She is skilled in HR Consulting, Coaching, Team Building and HR Policies.",
+            "CASTO Travel Philippines is a leading travel company providing comprehensive travel services including air tickets, hotel bookings, tour packages, visa assistance, and corporate travel management. The company serves both individual and corporate clients with personalized travel solutions.",
+            "CASI (Casto AI) is your intelligent virtual assistant, designed to help with travel inquiries, company information, team details, and general support. CASI combines AI technology with comprehensive knowledge about CASTO Travel Philippines to provide accurate and helpful responses.",
+            "CASTO Travel Philippines offers services in: Airline ticketing, Hotel reservations, Tour packages, Visa assistance, Corporate travel management, Travel insurance, Airport transfers, and Custom travel itineraries.",
+            "The company operates with a mission to provide exceptional travel experiences through innovative technology, personalized service, and deep industry expertise. CASTO Travel is committed to making travel accessible, enjoyable, and hassle-free for all clients."
         ]
         return knowledge
     except Exception as e:
         logging.error(f"Error loading knowledge: {str(e)}")
+        return []
+
+def search_knowledge(query, knowledge_entries=None):
+    """Enhanced knowledge search with relevance scoring"""
+    try:
+        if knowledge_entries is None:
+            knowledge_entries = get_cached_knowledge()
+        
+        if not query or not knowledge_entries:
+            return []
+        
+        query_lower = query.lower()
+        results = []
+        
+        for entry in knowledge_entries:
+            # Simple relevance scoring
+            relevance_score = 0
+            entry_lower = entry.lower()
+            
+            # Exact phrase matches get highest score
+            if query_lower in entry_lower:
+                relevance_score += 10
+            
+            # Word matches get medium score
+            query_words = query_lower.split()
+            for word in query_words:
+                if len(word) > 2 and word in entry_lower:  # Ignore very short words
+                    relevance_score += 2
+            
+            # Add to results if relevant
+            if relevance_score > 0:
+                results.append({
+                    "content": entry,
+                    "relevance": relevance_score,
+                    "query": query
+                })
+        
+        # Sort by relevance score (highest first)
+        results.sort(key=lambda x: x["relevance"], reverse=True)
+        
+        # Return top 3 most relevant results
+        return results[:3]
+        
+    except Exception as e:
+        logging.error(f"Error in knowledge search: {str(e)}")
         return []
 
 def fetch_website_data(url, query=None):
@@ -163,6 +211,41 @@ def get_knowledge():
         logging.error(f"Error in get_knowledge: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/knowledge/search', methods=['POST'])
+def search_knowledge_endpoint():
+    """Search knowledge base - available to all users"""
+    try:
+        data = request.json
+        query = data.get("query", "")
+        
+        if not query:
+            return jsonify({"error": "No search query provided"}), 400
+        
+        logging.info(f"Knowledge search requested: {query}")
+        
+        # Search knowledge base
+        search_results = search_knowledge(query)
+        
+        if search_results:
+            return jsonify({
+                "success": True,
+                "query": query,
+                "results": search_results,
+                "total_found": len(search_results)
+            })
+        else:
+            return jsonify({
+                "success": True,
+                "query": query,
+                "results": [],
+                "total_found": 0,
+                "message": "No relevant information found for your query."
+            })
+        
+    except Exception as e:
+        logging.error(f"Error in knowledge search: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/chat", methods=["POST"])
 def chat():
     """Chat with the AI bot - allows anonymous users"""
@@ -190,11 +273,23 @@ def chat():
         if is_authenticated:
             knowledge_entries = get_cached_knowledge()
         
+        # Enhanced knowledge search for all users (anonymous and authenticated)
+        knowledge_search_results = search_knowledge(user_input, knowledge_entries)
+        
         # Combine knowledge into a single string
-        knowledge_context = "\n".join(knowledge_entries)
-        system_prompt = "You are a helpful assistant named CASI."
+        knowledge_context = "\n".join(knowledge_entries) if knowledge_entries else ""
+        
+        # Add search results to context if available
+        if knowledge_search_results:
+            search_context = "\n\nRelevant Knowledge:\n" + "\n---\n".join([result["content"] for result in knowledge_search_results])
+            if knowledge_context:
+                knowledge_context += search_context
+            else:
+                knowledge_context = search_context
+        
+        system_prompt = "You are a helpful assistant named CASI, specializing in CASTO Travel Philippines information. Always be friendly, professional, and provide accurate information based on the knowledge provided."
         if knowledge_context:
-            system_prompt += f"\nHere is some important knowledge you must always use:\n{knowledge_context}"
+            system_prompt += f"\n\nHere is important knowledge you must use when relevant:\n{knowledge_context}"
 
         # Step 1: Check if the question is relevant to the website
         website_keywords = ["CASTO", "mission", "vision", "services", "CEO", "about"]
@@ -287,15 +382,20 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "success",
-        "message": "CASI Backend is running on Vercel",
+        "message": "CASI Backend is running on Vercel with Enhanced Knowledge Base",
         "api_key_configured": bool(GROQ_API_KEY),
         "ai_client_available": bool(client),
-        "authentication": "Anonymous users allowed for chat",
+        "knowledge_base": {
+            "entries": len(get_cached_knowledge()),
+            "features": ["Enhanced search", "Relevance scoring", "Comprehensive CASTO info"]
+        },
+        "authentication": "Anonymous users allowed for chat and knowledge search",
         "note": "If AI client is not available, fallback responses will be used",
         "endpoints": {
-            "chat": "POST /chat - General chat (anonymous users allowed)",
+            "chat": "POST /chat - General chat with enhanced knowledge integration",
+            "knowledge_search": "POST /knowledge/search - Search knowledge base (all users)",
+            "knowledge": "GET/POST /knowledge - Knowledge base management (requires auth)",
             "it_on_duty": "POST /it-on-duty - IT support (requires auth)",
-            "knowledge": "GET/POST /knowledge - Knowledge base (requires auth)",
             "test": "GET /test - Connectivity test"
         }
     })
