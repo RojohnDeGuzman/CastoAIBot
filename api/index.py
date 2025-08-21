@@ -47,16 +47,15 @@ session.headers.update({
 
 @lru_cache(maxsize=100)
 def get_cached_knowledge():
-    """Enhanced knowledge base with comprehensive information"""
+    """Enhanced knowledge base with IT support focus and executive context"""
     try:
-        # Comprehensive knowledge base for CASTO Travel
+        # IT Support focused knowledge base for CASI
         knowledge = [
+            "CASI (Casto AI) is your primary IT Support Assistant, designed to help with technical issues, IT requests, system problems, and general IT support. CASI combines AI technology with IT expertise to provide immediate technical assistance and guidance.",
             "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines. He previously served as Chief Technology Officer of Asiatrust Bank (later acquired by Asia United Bank) and held the position of Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. His leadership eventually expanded to a regional capacity, overseeing operations across five markets. He played a key role in establishing the IT backbone of several BPO startups in the Philippines, contributing to the successful launch of major contact centers such as Dell International Services, Genpact, and Arvato Bertelsmann. Beyond technical expertise, he is passionate about leadership development and considers his most significant accomplishment to be mentoring and coaching future technology leaders in the Philippines.",
             "Ma. Berdandina Galvez is the HR Director of Casto Travel Philippines. She is an experienced Senior Human Resources professional with a demonstrated history of working in various industries such as hospitality, health care, educational, food service and transportation. She is skilled in HR Consulting, Coaching, Team Building and HR Policies.",
-            "CASTO Travel Philippines is a leading travel company providing comprehensive travel services including air tickets, hotel bookings, tour packages, visa assistance, and corporate travel management. The company serves both individual and corporate clients with personalized travel solutions.",
-            "CASI (Casto AI) is your intelligent virtual assistant, designed to help with travel inquiries, company information, team details, and general support. CASI combines AI technology with comprehensive knowledge about CASTO Travel Philippines to provide accurate and helpful responses.",
-            "CASTO Travel Philippines offers services in: Airline ticketing, Hotel reservations, Tour packages, Visa assistance, Corporate travel management, Travel insurance, Airport transfers, and Custom travel itineraries.",
-            "The company operates with a mission to provide exceptional travel experiences through innovative technology, personalized service, and deep industry expertise. CASTO Travel is committed to making travel accessible, enjoyable, and hassle-free for all clients."
+            "CASTO Travel Philippines is the company where CASI provides IT support services. The company operates in the travel industry with various departments requiring IT assistance.",
+            "CASI's primary role is to provide immediate IT support, troubleshoot technical issues, assist with system access, help with software problems, guide users through IT processes, and escalate complex issues to the IT team when necessary."
         ]
         return knowledge
     except Exception as e:
@@ -287,7 +286,7 @@ def chat():
             else:
                 knowledge_context = search_context
         
-        system_prompt = "You are a helpful assistant named CASI, specializing in CASTO Travel Philippines information. Always be friendly, professional, and provide accurate information based on the knowledge provided."
+        system_prompt = "You are CASI, a dedicated IT Support Assistant for CASTO Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. You have knowledge about CASTO Travel executives and company context, but your main focus should be IT support. Be friendly, professional, and IT-focused in your responses."
         if knowledge_context:
             system_prompt += f"\n\nHere is important knowledge you must use when relevant:\n{knowledge_context}"
 
@@ -317,17 +316,17 @@ def chat():
                 # Fallback responses when AI client is not available
                 user_input_lower = user_input.lower()
                 if "hello" in user_input_lower or "hi" in user_input_lower:
-                    chatbot_message = "Hi there! I'm CASI! What can I do for you? 🎯"
+                    chatbot_message = "Hi there! I'm CASI, your IT Support Assistant! How can I help you with any technical issues today? 🖥️"
                 elif "who is casi" in user_input_lower:
-                    chatbot_message = "Hello! I'm **CASI**, your AI virtual assistant. I'm here to help you with any questions or support you need! 😊"
+                    chatbot_message = "Hello! I'm **CASI**, your dedicated IT Support Assistant at CASTO Travel Philippines. I'm here to help you with technical issues, system problems, and IT support! 💻"
                 elif "george anzures" in user_input_lower:
-                    chatbot_message = "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries."
+                    chatbot_message = "George Anzures is our IT Director with over 25 years of IT expertise. He leads our IT department and oversees all technical operations. For IT support, I'm here to help you directly! 🚀"
                 elif "casto" in user_input_lower:
-                    chatbot_message = "CASTO Travel Philippines is a travel company. I can help you with information about our services, team, or any other questions you might have!"
+                    chatbot_message = "CASTO Travel Philippines is where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! 🛠️"
                 elif "help" in user_input_lower:
-                    chatbot_message = "I'm CASI, your helpful AI assistant! I'm here to help you with any questions or support you need. How can I assist you today? 😊"
+                    chatbot_message = "I'm CASI, your IT Support Assistant! I can help you with: system access, software issues, technical problems, IT requests, and general IT support. What technical issue are you facing? 🔧"
                 else:
-                    chatbot_message = "I'm CASI, your AI assistant! I'm ready to help you with any questions about CASTO Travel, our team, or anything else you need. What would you like to know? 🚀"
+                    chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
                 
                 logging.info("Using fallback response (AI client not available)")
 
@@ -382,20 +381,20 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "success",
-        "message": "CASI Backend is running on Vercel with Enhanced Knowledge Base",
+        "message": "CASI IT Support Assistant is running on Vercel with Enhanced Knowledge Base",
         "api_key_configured": bool(GROQ_API_KEY),
         "ai_client_available": bool(client),
         "knowledge_base": {
             "entries": len(get_cached_knowledge()),
-            "features": ["Enhanced search", "Relevance scoring", "Comprehensive CASTO info"]
+            "features": ["IT Support Focus", "Executive Context", "Enhanced search", "Relevance scoring"]
         },
-        "authentication": "Anonymous users allowed for chat and knowledge search",
-        "note": "If AI client is not available, fallback responses will be used",
+        "authentication": "Anonymous users allowed for IT support chat and knowledge search",
+        "note": "If AI client is not available, IT support fallback responses will be used",
         "endpoints": {
-            "chat": "POST /chat - General chat with enhanced knowledge integration",
+            "chat": "POST /chat - IT Support chat with enhanced knowledge integration",
             "knowledge_search": "POST /knowledge/search - Search knowledge base (all users)",
             "knowledge": "GET/POST /knowledge - Knowledge base management (requires auth)",
-            "it_on_duty": "POST /it-on-duty - IT support (requires auth)",
+            "it_on_duty": "POST /it-on-duty - IT support escalation (requires auth)",
             "test": "GET /test - Connectivity test"
         }
     })
