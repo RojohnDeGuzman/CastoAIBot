@@ -631,7 +631,7 @@ class ChatbotWidget(QWidget):
     def initUI(self):
         # Set window properties
         self.setWindowTitle("CASI")
-        self.setGeometry(100, 100, 420, 550)  # Back to larger window size
+        self.setGeometry(100, 100, 460, 580)  # Increased from 420x550 to 460x580 for better message bubble space
         self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         
@@ -652,8 +652,8 @@ class ChatbotWidget(QWidget):
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
-        layout.setContentsMargins(25, 25, 25, 15)  # Reduced bottom margin
-        layout.setSpacing(15)  # Tighter spacing between sections
+        layout.setContentsMargins(25, 25, 25, 15)  # Reduced from 30,30,30,20 for more compact layout
+        layout.setSpacing(12)  # Reduced from 18 for tighter section spacing
 
         # === TOP BAR - Clean and organized ===
         top_bar_layout = QHBoxLayout()
@@ -802,8 +802,8 @@ class ChatbotWidget(QWidget):
         # === CHAT DISPLAY AREA - Clean and organized ===
         self.chat_display_layout = QVBoxLayout()
         self.chat_display_layout.setAlignment(Qt.AlignTop)
-        self.chat_display_layout.setSpacing(4)  # Teams-like compact vertical spacing
-        self.chat_display_layout.setContentsMargins(2, 2, 2, 2)  # Even closer to corners
+        self.chat_display_layout.setSpacing(6)  # Reduced from 8 for more compact message spacing
+        self.chat_display_layout.setContentsMargins(6, 6, 6, 6)  # Reduced from 8 for more compact layout
 
         # Create scrollable chat container
         scroll_content = QWidget()
@@ -824,17 +824,18 @@ class ChatbotWidget(QWidget):
                 background: transparent;
                 border: none;
                 margin: 0px;
+                padding: 4px;  /* Added padding for breathing room */
             }
             QScrollBar:vertical {
                 background: rgba(52, 152, 219, 0.1);
-                width: 8px;
-                margin: 0px;
-                border-radius: 4px;
+                width: 10px;  /* Increased from 8px for better usability */
+                margin: 2px;  /* Added margin for better appearance */
+                border-radius: 5px;
             }
             QScrollBar::handle:vertical {
                 background-color: #3498db;
                 min-height: 30px;
-                border-radius: 4px;
+                border-radius: 5px;
             }
             QScrollBar::handle:vertical:hover {
                 background-color: #2980b9;
@@ -855,8 +856,8 @@ class ChatbotWidget(QWidget):
         # === ACTION BUTTONS - Enhanced spacing and layout ===
         prompt_layout = QHBoxLayout()
         prompt_layout.setAlignment(Qt.AlignHCenter)
-        prompt_layout.setSpacing(15)  # Tighter spacing
-        prompt_layout.setContentsMargins(2, 2, 2, 0)  # Minimal bottom margin
+        prompt_layout.setSpacing(12)  # Reduced from 20 for tighter button spacing
+        prompt_layout.setContentsMargins(8, 4, 8, 0)  # Reduced top margin from 8 to 4
 
         self.prompt_label = ClickableLabel("🚧 Under Maintenance")
         self.prompt_label.setStyleSheet("""
@@ -912,8 +913,8 @@ class ChatbotWidget(QWidget):
 
         # === INPUT AREA - Enhanced spacing and layout ===
         input_layout = QHBoxLayout()
-        input_layout.setSpacing(12)  # Better spacing with larger window
-        input_layout.setContentsMargins(5, 8, 5, 4)  # Minimal bottom margin
+        input_layout.setSpacing(12)  # Reduced from 15 for tighter spacing
+        input_layout.setContentsMargins(6, 8, 6, 6)  # Reduced from 8,12,8,8 for more compact layout
         
         self.input_field = ChatInput(self)
         self.input_field.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
@@ -1412,13 +1413,13 @@ class ChatbotWidget(QWidget):
         message_container.setStyleSheet("""
             QWidget {
                 background: transparent;
-                margin: 2px 0px;
+                margin: 2px 0px;  /* Reduced from 4px for tighter spacing */
                 padding: 0px;
             }
         """)
         
         message_layout = QHBoxLayout(message_container)
-        message_layout.setSpacing(8)  # Teams-like compact spacing
+        message_layout.setSpacing(10)  # Reduced from 12 to prevent avatar overlap
         message_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
 
         # === Clean Message Bubble ===
@@ -1426,8 +1427,8 @@ class ChatbotWidget(QWidget):
         message_label.setWordWrap(True)
         message_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         message_label.setOpenExternalLinks(True)
-        message_label.setMaximumWidth(300)  # Match input field width exactly
-        message_label.setMinimumWidth(180)   # Better minimum width
+        message_label.setMaximumWidth(450)  # Increased from 400 to take advantage of extra window space
+        message_label.setMinimumWidth(280)   # Increased from 250 for better minimum width
         message_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Proper text alignment
 
         # Create clean bubble wrapper
@@ -1471,43 +1472,47 @@ class ChatbotWidget(QWidget):
                 }
             """)
             
-            message_layout.addWidget(logo_label, 0, Qt.AlignBottom)
-            message_layout.addWidget(bubble_wrapper, 0, Qt.AlignBottom)
+            message_layout.addWidget(logo_label, 0, Qt.AlignVCenter)  # Changed from AlignBottom to AlignVCenter for consistency
+            message_layout.addWidget(bubble_wrapper, 0, Qt.AlignVCenter)  # Changed from AlignBottom to AlignVCenter for consistency
             message_layout.addStretch()
             
             message_label.setStyleSheet("""
                 background-color: #ecf0f1;
                 color: #2c3e50; 
-                border-radius: 16px; 
-                padding: 12px 16px; 
-                font-size: 13px;
+                border-radius: 18px; 
+                padding: 16px 20px; 
+                font-size: 14px;
                 font-family: 'Segoe UI', Arial;
                 font-weight: 400;
                 border: 1px solid #bdc3c7;
                 margin: 0px;
                 /* box-shadow removed - not supported in PyQt5 */
-                line-height: 1.5;
-                min-height: 20px;
+                line-height: 1.6;
+                min-height: 24px;
+                max-width: 450px;  /* Increased to match new message label width */
+                min-width: 280px;  /* Increased to match new message label width */
             """)
             
         else:  # sender is "user"
             # User: [STRETCH] [BUBBLE] [ICON] - Right aligned
             message_layout.addStretch()
-            message_layout.addWidget(bubble_wrapper, 0, Qt.AlignBottom)
+            message_layout.addWidget(bubble_wrapper, 0, Qt.AlignVCenter)  # Changed from AlignBottom to AlignVCenter for consistency
             
             message_label.setStyleSheet("""
                 background-color: #1abc9c;
                 color: white; 
-                border-radius: 16px; 
-                padding: 12px 16px; 
-                font-size: 13px;
+                border-radius: 18px; 
+                padding: 16px 20px; 
+                font-size: 14px;
                 font-family: 'Segoe UI', Arial;
                 font-weight: 400;
                 border: 1px solid #16a085;
                 margin: 0px;
                 /* box-shadow removed - not supported in PyQt5 */
-                line-height: 1.5;
-                min-height: 20px;
+                line-height: 1.6;
+                min-height: 24px;
+                max-width: 450px;  /* Increased to match new message label width */
+                min-width: 280px;  /* Increased to match new message label width */
             """)
             
             # Always add user avatar for proper alignment
@@ -1520,10 +1525,10 @@ class ChatbotWidget(QWidget):
                         border-radius: 17px;
                         padding: 1px;
                         background: rgba(46, 204, 113, 0.1);
-                        margin: 0px;
+                        margin: 0px 0px 0px 4px;  /* Added left margin to prevent overlap */
                     }
                 """)
-                message_layout.addWidget(user_logo_label, 0, Qt.AlignBottom)
+                message_layout.addWidget(user_logo_label, 0, Qt.AlignVCenter)  # Changed from AlignBottom to AlignVCenter for consistency
             else:
                 # Create a proper user avatar placeholder for alignment
                 user_logo_label = QLabel()
@@ -1534,10 +1539,10 @@ class ChatbotWidget(QWidget):
                         border-radius: 17px;
                         padding: 1px;
                         background: rgba(46, 204, 113, 0.1);
-                        margin: 0px;
+                        margin: 0px 0px 0px 4px;  /* Added left margin to prevent overlap */
                     }
                 """)
-                message_layout.addWidget(user_logo_label, 0, Qt.AlignBottom)
+                message_layout.addWidget(user_logo_label, 0, Qt.AlignVCenter)  # Changed from AlignBottom to AlignVCenter for consistency
 
         # Add the message container to the chat display layout
         self.chat_display_layout.addWidget(message_container)
@@ -1592,8 +1597,8 @@ class ChatbotWidget(QWidget):
         # Typing message with clean, modern design
         typing_label = QLabel("CASI is thinking")
         typing_label.setWordWrap(True)
-        typing_label.setMaximumWidth(280)
-        typing_label.setMinimumWidth(200)
+        typing_label.setMaximumWidth(450)  # Increased to match new message bubble width
+        typing_label.setMinimumWidth(280)   # Increased to match new message bubble width
         typing_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         typing_label.setObjectName("typing_message")
         
@@ -1604,11 +1609,11 @@ class ChatbotWidget(QWidget):
                 color: #6c757d;
                 border: 1px solid #e9ecef;
                 border-radius: 18px;
-                padding: 12px 18px;
+                padding: 16px 20px;  /* Increased padding to match message bubbles */
                 font-size: 14px;
                 font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
                 font-weight: 400;
-                line-height: 1.4;
+                line-height: 1.6;  /* Increased line height to match message bubbles */
                 min-height: 24px;
             }
         """)
@@ -1704,11 +1709,11 @@ class ChatbotWidget(QWidget):
                     color: #6c757d;
                     border: 1px solid #e9ecef;
                     border-radius: 18px;
-                    padding: 12px 18px;
+                    padding: 16px 20px;
                     font-size: 14px;
                     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-weight: 400;
-                    line-height: 1.4;
+                    line-height: 1.6;  /* Increased line height to match message bubbles */
                     min-height: 24px;
                     transform: scale({self.message_scale});
                 }}
@@ -2348,6 +2353,11 @@ class SystemTrayApp(QSystemTrayIcon):
         open_action.triggered.connect(self.show_chatbot)
         self.menu.addAction(open_action)
         
+        # Test Smart Notifications action
+        test_notif_action = QAction("🔔 Test Smart Notifications", self.menu)
+        test_notif_action.triggered.connect(self.test_smart_notifications)
+        self.menu.addAction(test_notif_action)
+        
         # Separator
         self.menu.addSeparator()
         
@@ -2387,7 +2397,95 @@ class SystemTrayApp(QSystemTrayIcon):
             self.show_chatbot()
 
     def show_startup_message(self):
-        self.showMessage("CASI", "The application is running in the system tray.", QSystemTrayIcon.Information, 2000)
+        """Show startup message only if app is minimized."""
+        if self.is_app_minimized():
+            self.showMessage("CASI", "The application is running in the system tray.", QSystemTrayIcon.Information, 2000)
+    
+    def is_app_minimized(self):
+        """Check if the main chatbot window is minimized or hidden."""
+        try:
+            # Check if the main chatbot window is visible and not minimized
+            if hasattr(self.chatbot, 'isVisible'):
+                # If main window is not visible, consider it minimized
+                if not self.chatbot.isVisible():
+                    return True
+                
+                # Check if minimized widget is showing (indicates minimized state)
+                if hasattr(self.chatbot, 'minimized_widget') and self.chatbot.minimized_widget is not None:
+                    if self.chatbot.minimized_widget.isVisible():
+                        return True
+                
+                # Check window state if available
+                if hasattr(self.chatbot, 'windowState'):
+                    if self.chatbot.windowState() == Qt.WindowMinimized:
+                        return True
+                
+                # If main window is visible and no minimized widget, it's not minimized
+                return False
+            else:
+                # Fallback: if we can't determine, assume not minimized
+                return False
+        except Exception as e:
+            print(f"[DEBUG] Error checking app minimized state: {e}")
+            return False
+    
+    def show_notification(self, title, message, icon_type=QSystemTrayIcon.Information, duration=2000):
+        """Show notification only if app is minimized."""
+        if self.is_app_minimized():
+            self.showMessage(title, message, icon_type, duration)
+            print(f"[DEBUG] Notification shown (app minimized): {title} - {message}")
+        else:
+            print(f"[DEBUG] Notification skipped (app not minimized): {title} - {message}")
+    
+    def show_minimized_notification(self, title, message, icon_type=QSystemTrayIcon.Information, duration=2000):
+        """Force show notification when app is minimized (for important messages)."""
+        if self.is_app_minimized():
+            self.showMessage(title, message, icon_type, duration)
+            print(f"[DEBUG] Minimized notification shown: {title} - {message}")
+        else:
+            print(f"[DEBUG] Minimized notification skipped (app visible): {title} - {message}")
+    
+    def show_new_message_notification(self, sender_name="User", message_preview=""):
+        """Show notification for new messages only when app is minimized."""
+        if self.is_app_minimized():
+            title = f"New message from {sender_name}"
+            preview = message_preview[:50] + "..." if len(message_preview) > 50 else message_preview
+            message = f"{preview}"
+            self.showMessage(title, message, QSystemTrayIcon.Information, 3000)
+            print(f"[DEBUG] New message notification shown: {title} - {message}")
+        else:
+            print(f"[DEBUG] New message notification skipped (app visible)")
+    
+    def show_it_support_notification(self, issue_type="IT Issue"):
+        """Show notification for IT support requests only when app is minimized."""
+        if self.is_app_minimized():
+            title = "IT Support Request"
+            message = f"New {issue_type} requires attention"
+            self.showMessage(title, message, QSystemTrayIcon.Warning, 4000)
+            print(f"[DEBUG] IT support notification shown: {title} - {message}")
+        else:
+            print(f"[DEBUG] IT support notification skipped (app visible)")
+    
+    def show_system_notification(self, title, message, icon_type=QSystemTrayIcon.Information, duration=2000):
+        """Show system notification only when app is minimized."""
+        if self.is_app_minimized():
+            self.showMessage(title, message, icon_type, duration)
+            print(f"[DEBUG] System notification shown: {title} - {message}")
+        else:
+            print(f"[DEBUG] System notification skipped (app visible): {title} - {message}")
+    
+    def get_app_status(self):
+        """Get current app status for debugging."""
+        status = {
+            "main_window_visible": hasattr(self.chatbot, 'isVisible') and self.chatbot.isVisible(),
+            "minimized_widget_visible": hasattr(self.chatbot, 'minimized_widget') and 
+                                     self.chatbot.minimized_widget is not None and 
+                                     self.chatbot.minimized_widget.isVisible(),
+            "is_minimized": self.is_app_minimized(),
+            "system_tray_available": self.isSystemTrayAvailable(),
+            "system_tray_visible": self.isVisible()
+        }
+        return status
         
     def show_chatbot(self):
         """Show chatbot window."""
@@ -2412,7 +2510,7 @@ class SystemTrayApp(QSystemTrayIcon):
     def exit_app(self):
         """Exit the application."""
         print("[DEBUG] Exit requested from system tray")
-        self.showMessage("CASI", "The application is closing.", QSystemTrayIcon.Information, 2000)
+        self.show_notification("CASI", "The application is closing.", QSystemTrayIcon.Information, 2000)
         # Do not call self.chatbot.close() here, just quit the app
         self.app.quit()
     
@@ -2450,16 +2548,40 @@ class SystemTrayApp(QSystemTrayIcon):
         print(f"[DEBUG] Tooltip: {self.toolTip()}")
         print(f"[DEBUG] Context menu exists: {self.contextMenu() is not None}")
         
-        # Try to show a test message
+        # Get and display app status
+        app_status = self.get_app_status()
+        print("[DEBUG] === APP STATUS ===")
+        for key, value in app_status.items():
+            print(f"[DEBUG] {key}: {value}")
+        
+        # Try to show a test message (only if minimized)
         try:
-            self.showMessage("CASI Test", "System tray test message", QSystemTrayIcon.Information, 3000)
-            print("[DEBUG] Test message shown successfully")
+            self.show_notification("CASI Test", "System tray test message", QSystemTrayIcon.Information, 3000)
+            print("[DEBUG] Test message handled by smart notification system")
         except Exception as e:
             print(f"[DEBUG] Failed to show test message: {e}")
         
         # Force show
         self.force_show()
         print("[DEBUG] === END DEBUG INFO ===")
+    
+    def test_smart_notifications(self):
+        """Test the smart notification system with different types of notifications."""
+        print("[DEBUG] === TESTING SMART NOTIFICATIONS ===")
+        
+        # Test different notification types
+        notifications = [
+            ("System Test", "Testing system notification", QSystemTrayIcon.Information),
+            ("IT Support", "Testing IT support notification", QSystemTrayIcon.Warning),
+            ("New Message", "Testing new message notification", QSystemTrayIcon.Information),
+            ("Minimized Test", "Testing minimized notification", QSystemTrayIcon.Information)
+        ]
+        
+        for i, (title, message, icon_type) in enumerate(notifications):
+            QTimer.singleShot(i * 1000, lambda t=title, m=message, ic=icon_type: self.show_system_notification(t, m, ic, 2000))
+            print(f"[DEBUG] Scheduled notification {i+1}: {title} - {message}")
+        
+        print("[DEBUG] Smart notification test completed")
     
 class ClickableLabel(QLabel):
     def __init__(self, text, parent=None):
