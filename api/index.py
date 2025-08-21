@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
 import time
-import os
 
 app = Flask(__name__)
 CORS(app)
@@ -12,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Simple chat endpoint for testing - no external API calls"""
+    """Super simple chat endpoint - just hardcoded responses for testing"""
     try:
         logging.info("Chat endpoint called")
         
@@ -28,17 +27,21 @@ def chat():
         
         logging.info(f"Received message: {user_input}")
         
-        # Simple response logic without external API
-        if "hello" in user_input.lower() or "hi" in user_input.lower():
+        # Super simple response logic - no external dependencies
+        user_input_lower = user_input.lower()
+        
+        if "hello" in user_input_lower or "hi" in user_input_lower:
             response = "Hi there! I'm CASI! What can I do for you? 🎯"
-        elif "who is casi" in user_input.lower():
+        elif "who is casi" in user_input_lower:
             response = "Hello! I'm **CASI**, your AI virtual assistant. I'm here to help you with any questions or support you need! 😊"
-        elif "george anzures" in user_input.lower():
+        elif "george anzures" in user_input_lower:
             response = "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries."
-        elif "casto" in user_input.lower():
+        elif "casto" in user_input_lower:
             response = "CASTO Travel Philippines is a travel company. I can help you with information about our services, team, or any other questions you might have!"
-        else:
+        elif "help" in user_input_lower:
             response = "I'm CASI, your helpful AI assistant! I'm here to help you with any questions or support you need. How can I assist you today? 😊"
+        else:
+            response = "I'm CASI, your AI assistant! I'm ready to help you with any questions about CASTO Travel, our team, or anything else you need. What would you like to know? 🚀"
         
         logging.info(f"Generated response: {response}")
         return jsonify({"response": response})
@@ -47,58 +50,15 @@ def chat():
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
-@app.route("/knowledge", methods=["GET"])
-def get_knowledge():
-    """Get knowledge base entries"""
-    try:
-        # Return some basic knowledge for testing
-        knowledge = [
-            "George Anzures is the IT Director with 25+ years of IT expertise",
-            "CASTO Travel Philippines provides travel services",
-            "CASI is your AI virtual assistant"
-        ]
-        return jsonify({"knowledge": knowledge})
-    except Exception as e:
-        logging.error(f"Error in get_knowledge: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/search", methods=["POST"])
-def search():
-    """Search knowledge base"""
-    try:
-        data = request.json
-        query = data.get("query", "")
-        
-        if not query:
-            return jsonify({"error": "No query provided"}), 400
-        
-        # Simple search through basic knowledge
-        knowledge = [
-            "George Anzures is the IT Director with 25+ years of IT expertise",
-            "CASTO Travel Philippines provides travel services",
-            "CASI is your AI virtual assistant"
-        ]
-        
-        results = []
-        for entry in knowledge:
-            if query.lower() in entry.lower():
-                results.append(entry)
-        
-        return jsonify({"results": results})
-    except Exception as e:
-        logging.error(f"Error in search: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/", methods=["GET"])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "success",
-        "message": "CASI Backend is running",
+        "message": "CASI Minimal Test Backend is running",
+        "note": "No KB integration, no website scraping - just simple responses",
         "endpoints": {
-            "chat": "POST /chat - General chat",
-            "knowledge": "GET /knowledge - Knowledge base",
-            "search": "POST /search - Search knowledge base",
+            "chat": "POST /chat - Simple chat with hardcoded responses",
             "health": "GET / - Health check"
         }
     })
@@ -112,7 +72,7 @@ def test_endpoint():
             "message": "Backend is reachable and responding",
             "timestamp": time.time(),
             "endpoint": "/test",
-            "note": "This is a simplified test backend"
+            "note": "Super minimal backend - no external dependencies"
         })
     except Exception as e:
         return jsonify({
@@ -123,9 +83,9 @@ def test_endpoint():
         }), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting CASI Test Backend Server...")
+    print("🚀 Starting CASI Minimal Test Backend...")
     print("✅ Server will run on http://localhost:5000")
-    print("✅ Simplified backend for testing - no external API calls")
+    print("✅ Super simple - no KB, no website scraping, just hardcoded responses")
     print("=" * 50)
     
     logging.info("✅ Backend is running at http://localhost:5000")
