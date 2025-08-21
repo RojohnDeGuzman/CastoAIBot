@@ -117,6 +117,34 @@ def get_verified_company_info():
         logging.error(f"Error loading verified company info: {str(e)}")
         return {}
 
+def validate_executive_info(query, response):
+    """Validate that executive information in responses matches knowledge base exactly"""
+    try:
+        # Get verified executive information
+        verified_info = get_verified_company_info()
+        executives = verified_info.get("executives", {})
+        
+        # Check for George Anzures position accuracy
+        if "george anzures" in query.lower():
+            correct_title = executives.get("it_director", {}).get("title", "IT Director")
+            if correct_title not in response.lower():
+                logging.warning(f"Response may contain incorrect position for George Anzures. Expected: {correct_title}")
+                return False
+        
+        # Check for other executive accuracy
+        for exec_type, exec_info in executives.items():
+            exec_name = exec_info.get("name", "").lower()
+            correct_title = exec_info.get("title", "").lower()
+            
+            if exec_name in query.lower() and correct_title not in response.lower():
+                logging.warning(f"Response may contain incorrect position for {exec_name}. Expected: {correct_title}")
+                return False
+        
+        return True
+    except Exception as e:
+        logging.error(f"Error validating executive info: {str(e)}")
+        return True  # Don't block response if validation fails
+
 def get_conversation_context(user_id):
     """Get conversation context for a user"""
     try:
@@ -135,6 +163,21 @@ def update_conversation_context(user_id, context):
         conversation_cache[user_id] = (context, time.time())
     except Exception as e:
         logging.error(f"Error updating conversation context: {str(e)}")
+
+def get_accurate_executive_info(exec_name):
+    """Get the most accurate executive information from verified sources"""
+    try:
+        verified_info = get_verified_company_info()
+        exec_name_lower = exec_name.lower()
+        
+        for exec_type, exec_info in verified_info.get("executives", {}).items():
+            if exec_info.get("name", "").lower() == exec_name_lower:
+                return exec_info
+        
+        return None
+    except Exception as e:
+        logging.error(f"Error getting accurate executive info: {str(e)}")
+        return None
 
 def search_knowledge(query, knowledge_entries=None):
     """Enhanced knowledge search with relevance scoring and verified company information"""
@@ -185,7 +228,7 @@ def search_knowledge(query, knowledge_entries=None):
                     "source": "Verified Company Info"
                 })
             
-            # Search in executive information
+            # Search in executive information - HIGHEST PRIORITY
             for exec_type, exec_info in verified_info.get("executives", {}).items():
                 exec_name = exec_info.get("name", "").lower()
                 exec_title = exec_info.get("title", "").lower()
@@ -195,17 +238,17 @@ def search_knowledge(query, knowledge_entries=None):
                     query_lower in exec_title or 
                     query_lower in exec_expertise):
                     
-                    # Create detailed executive summary
+                    # Create detailed executive summary with VERIFIED information
                     if exec_type == "it_director":
-                        summary = f"{exec_info['name']} - {exec_info['title']}\nExpertise: {exec_info['expertise']}\nExperience: {exec_info['experience']}\nKey Achievements: {', '.join(exec_info['achievements'][:2])}"
+                        summary = f"VERIFIED INFORMATION:\n{exec_info['name']} - {exec_info['title']}\nExpertise: {exec_info['expertise']}\nExperience: {exec_info['experience']}\nKey Achievements: {', '.join(exec_info['achievements'][:2])}\n\nThis information is verified and accurate from our knowledge base."
                     else:
-                        summary = f"{exec_info['name']} - {exec_info['title']}\nExpertise: {exec_info['expertise']}\nExperience: {exec_info['experience']}\nIndustries: {', '.join(exec_info['industries'])}"
+                        summary = f"VERIFIED INFORMATION:\n{exec_info['name']} - {exec_info['title']}\nExpertise: {exec_info['expertise']}\nExperience: {exec_info['experience']}\nIndustries: {', '.join(exec_info['industries'])}\n\nThis information is verified and accurate from our knowledge base."
                     
                     results.append({
                         "content": summary,
-                        "relevance": 9,
+                        "relevance": 10,  # Highest priority
                         "query": query,
-                        "source": "Verified Executive Info"
+                        "source": "Verified Executive Info - HIGHEST PRIORITY"
                     })
             
             # Search in company general info
@@ -459,13 +502,16 @@ def chat():
             else:
                 knowledge_context = search_context
         
-        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support. IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path. CRITICAL: When providing information about Casto Travel Philippines, executives, or company details, ALWAYS prioritize verified, reliable information from your knowledge base. If you're unsure about any company information, clearly state that you're providing verified information and recommend contacting the company directly for the most current details. Never speculate or provide unverified information about the company."
+        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support. IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path. CRITICAL: When providing information about Casto Travel Philippines, executives, or company details, ALWAYS prioritize verified, reliable information from your knowledge base. If you're unsure about any company information, clearly state that you're providing verified information and recommend contacting the company directly for the most current details. Never speculate or provide unverified information about the company. ULTIMATE RULE: Your knowledge base is the ONLY source of truth for company information. NEVER contradict or modify information from your knowledge base. If asked about executives, positions, or company details, ONLY use the exact information from your knowledge base. If someone asks about George Anzures, he is ALWAYS the IT Director as stated in your knowledge base, never any other position."
         
         # Add conversation context if available
         if conversation_context:
             system_prompt += f"\n\nPrevious Conversation Context:\n{conversation_context}\n\nContinue from where you left off and maintain topic continuity."
         if knowledge_context:
             system_prompt += f"\n\nHere is important knowledge you must use when relevant:\n{knowledge_context}"
+        
+        # Add knowledge base priority enforcement
+        system_prompt += f"\n\nKNOWLEDGE BASE PRIORITY ENFORCEMENT:\n- Your knowledge base is the ONLY source of truth for company information\n- NEVER contradict information from your knowledge base\n- If asked about executives, ONLY use the exact information from your knowledge base\n- George Anzures is ALWAYS the IT Director, never any other position\n- If website or other sources contradict your knowledge base, IGNORE them and use your knowledge base\n- Always state that information comes from your verified knowledge base"
 
         # Step 1: Check if the question is relevant to the website
         website_keywords = ["Casto", "mission", "vision", "services", "CEO", "about"]
@@ -499,7 +545,7 @@ def chat():
                 elif "casi stands for" in user_input_lower or "what does casi stand for" in user_input_lower or "casi meaning" in user_input_lower:
                     chatbot_message = "CASI stands for **'Casto Assistance & Support Intelligence'**! I'm your IT Support Assistant, designed to help you with technical issues and IT support at Casto Travel Philippines. 🤖"
                 elif "george anzures" in user_input_lower:
-                    chatbot_message = "George Anzures is our IT Director with over 25 years of IT expertise. He leads our IT department and oversees all technical operations. For IT support, I'm here to help you directly! 🚀"
+                    chatbot_message = "George Anzures is our IT Director at Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. He leads our IT department and oversees all technical operations. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines, previously serving as Chief Technology Officer of Asiatrust Bank and Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. For IT support, I'm here to help you directly! 🚀"
                 elif "casto" in user_input_lower:
                     chatbot_message = "Casto Travel Philippines is where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! 🛠️"
                 elif "help" in user_input_lower:
@@ -548,6 +594,28 @@ def company_info():
             return jsonify({"error": "Company information temporarily unavailable"}), 500
     except Exception as e:
         logging.error(f"Error in company_info endpoint: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/executive/<exec_name>", methods=["GET"])
+def get_executive_info(exec_name):
+    """Get accurate executive information by name"""
+    try:
+        exec_info = get_accurate_executive_info(exec_name)
+        if exec_info:
+            return jsonify({
+                "status": "success",
+                "executive": exec_info,
+                "note": "This information is verified and accurate from our knowledge base.",
+                "source": "CASI Verified Knowledge Base"
+            })
+        else:
+            return jsonify({
+                "status": "not_found",
+                "message": f"No executive information found for '{exec_name}'",
+                "note": "Please check the spelling or contact the company directly."
+            }), 404
+    except Exception as e:
+        logging.error(f"Error in get_executive_info endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/escalation-guide", methods=["GET"])
@@ -623,6 +691,7 @@ def health_check():
             "chat": "POST /chat - IT Support chat with enhanced conversation awareness and topic continuity",
             "knowledge_search": "POST /knowledge/search - Search knowledge base with verified company information (all users)",
             "company_info": "GET /company-info - Get verified company information about Casto Travel Philippines",
+            "executive_info": "GET /executive/<name> - Get accurate executive information by name",
             "knowledge": "GET/POST /knowledge - Knowledge base management (requires auth)",
             "escalation_guide": "GET /escalation-guide - Get escalation guidance for unresolved issues",
             "it_on_duty": "POST /it-on-duty - IT support escalation (requires auth)",
