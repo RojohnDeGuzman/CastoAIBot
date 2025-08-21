@@ -57,6 +57,9 @@ def get_cached_knowledge():
         knowledge = [
             "CASI stands for 'Casto Assistance & Support Intelligence'. CASI is your primary IT Support Assistant, designed to help with technical issues, IT requests, system problems, and general IT support. CASI combines AI technology with IT expertise to provide immediate technical assistance and guidance.",
             "My name is CASI, which stands for 'Casto Assistance & Support Intelligence'. I am your dedicated IT Support Assistant at Casto Travel Philippines. I'm here to help you with technical issues, system problems, and IT support.",
+            "Maryles Casto is the Founder & Chairperson of Casto Travel Philippines with over 40 years of experience in the travel industry. She founded Casto Travel Philippines and previously sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines and provides knowledge, insight, and inspiration in client interactions, organizing exclusive journeys, and steering the company with her leadership and strategic vision.",
+            "Marc Casto is the CEO of Casto Travel Philippines (CTP) and its holding company MVC Solutions (MVC). As one of the founding members of both organizations, he was critical in their formation and early success. He is focused on strategy, execution, operations, and ensuring the company meets its financial, ethical, and social requirements while exceeding growth goals and investing in innovative solutions.",
+            "Alwin Benedicto is the Chief Financial Officer (CFO) of Casto Travel Philippines. A Certified Public Accountant with over 20 years of experience in Taxation, Financial Audits, Planning and Analysis, and Finance. Prior to joining Casto, he worked in leadership roles for different industries including BPO/KPO (Innodata, Inc), FinTech (C88 Financial Technologies, Ltd), and Supply Chain and Logistics (Ayala Corporation Logistics Group). He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances.",
             "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines. He previously served as Chief Technology Officer of Asiatrust Bank (later acquired by Asia United Bank) and held the position of Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. His leadership eventually expanded to a regional capacity, overseeing operations across five markets. He played a key role in establishing the IT backbone of several BPO startups in the Philippines, contributing to the successful launch of major contact centers such as Dell International Services, Genpact, and Arvato Bertelsmann. Beyond technical expertise, he is passionate about leadership development and considers his most significant accomplishment to be mentoring and coaching future technology leaders in the Philippines.",
             "Ma. Berdandina Galvez is the HR Director of Casto Travel Philippines. She is an experienced Senior Human Resources professional with a demonstrated history of working in various industries such as hospitality, health care, educational, food service and transportation. She is skilled in HR Consulting, Coaching, Team Building and HR Policies.",
             "Casto Travel Philippines is the company where CASI provides IT support services. The company operates in the travel industry with various departments requiring IT assistance.",
@@ -84,6 +87,46 @@ def get_verified_company_info():
                 "Travel Insurance"
             ],
             "executives": {
+                "founder_chairperson": {
+                    "name": "Maryles Casto",
+                    "title": "Founder & Chairperson",
+                    "expertise": "Travel Industry Leadership, Strategic Vision, Business Development",
+                    "experience": "40+ years in travel industry",
+                    "achievements": [
+                        "Founded Casto Travel Philippines",
+                        "Sold Casto Travel to Flight Centre (world's largest travel company)",
+                        "Continues to own and lead Casto Travel Philippines",
+                        "Provides knowledge, insight, and inspiration in client interactions and exclusive journeys"
+                    ]
+                },
+                "ceo": {
+                    "name": "Marc Casto",
+                    "title": "CEO",
+                    "expertise": "Strategy, Execution, Operations, Financial Management, Ethical Leadership",
+                    "experience": "Founding member of CTP and MVC",
+                    "achievements": [
+                        "CEO of Casto Travel Philippines (CTP)",
+                        "CEO of holding company MVC Solutions (MVC)",
+                        "Critical in formation and early success of both organizations",
+                        "Focused on exceeding growth goals and innovative solutions"
+                    ]
+                },
+                "cfo": {
+                    "name": "Alwin Benedicto",
+                    "title": "Chief Financial Officer",
+                    "expertise": "Taxation, Financial Audits, Planning and Analysis, Finance",
+                    "experience": "20+ years in finance",
+                    "previous_roles": [
+                        "Leadership roles in BPO/KPO (Innodata, Inc)",
+                        "FinTech (C88 Financial Technologies, Ltd)",
+                        "Supply Chain and Logistics (Ayala Corporation Logistics Group)"
+                    ],
+                    "responsibilities": [
+                        "Financial Reporting",
+                        "Financial Planning and Operations",
+                        "Taxation and Statutory Compliances"
+                    ]
+                },
                 "it_director": {
                     "name": "George Anzures",
                     "title": "IT Director",
@@ -100,7 +143,7 @@ def get_verified_company_info():
                         "Regional IT operations across 5 markets",
                         "Mentored future technology leaders in Philippines"
                     ]
-                },
+                }, 
                 "hr_director": {
                     "name": "Ma. Berdandina Galvez",
                     "title": "HR Director",
@@ -546,6 +589,14 @@ def chat():
                     chatbot_message = "CASI stands for **'Casto Assistance & Support Intelligence'**! I'm your IT Support Assistant, designed to help you with technical issues and IT support at Casto Travel Philippines. 🤖"
                 elif "george anzures" in user_input_lower:
                     chatbot_message = "George Anzures is our IT Director at Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. He leads our IT department and oversees all technical operations. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines, previously serving as Chief Technology Officer of Asiatrust Bank and Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. For IT support, I'm here to help you directly! 🚀"
+                elif "maryles casto" in user_input_lower:
+                    chatbot_message = "Maryles Casto is our Founder & Chairperson with over 40 years of experience in the travel industry. She founded Casto Travel Philippines and previously sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines and provides strategic leadership and vision for the company! 🏆"
+                elif "marc casto" in user_input_lower:
+                    chatbot_message = "Marc Casto is our CEO of Casto Travel Philippines (CTP) and its holding company MVC Solutions (MVC). As one of the founding members, he was critical in the formation and early success of both organizations. He focuses on strategy, execution, operations, and ensuring the company meets its financial, ethical, and social requirements! 🚀"
+                elif "alwin benedicto" in user_input_lower:
+                    chatbot_message = "Alwin Benedicto is our Chief Financial Officer (CFO), a Certified Public Accountant with over 20 years of experience in Taxation, Financial Audits, Planning and Analysis, and Finance. He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances! 💼"
+                elif "berdandina galvez" in user_input_lower or "ma. berdandina" in user_input_lower:
+                    chatbot_message = "Ma. Berdandina Galvez is our HR Director, an experienced Senior Human Resources professional with expertise in HR Consulting, Coaching, Team Building and HR Policies across multiple industries including hospitality, healthcare, education, food service and transportation! 👥"
                 elif "casto" in user_input_lower:
                     chatbot_message = "Casto Travel Philippines is where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! 🛠️"
                 elif "help" in user_input_lower:
@@ -637,6 +688,11 @@ def escalation_guide():
                 "method": "Direct Contact",
                 "description": "Reach out to George Anzures (IT Director) for critical system issues",
                 "when_to_use": "For critical system failures or security incidents"
+            },
+            {
+                "method": "Executive Escalation",
+                "description": "Contact Marc Casto (CEO) for critical business-impacting issues",
+                "when_to_use": "For issues affecting business operations or requiring executive decision"
             }
         ],
         "note": "CASI will always recommend the appropriate escalation path when an issue cannot be resolved through initial assistance."
