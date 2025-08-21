@@ -1049,10 +1049,18 @@ class ChatbotWidget(QWidget):
         self.add_hover_animation(self.close_button)
         self.add_hover_animation(self.send_button)
 
-        # Only show generic welcome if not logged in
+        # Enhanced starter message with engaging design
         cache_path = os.path.join(os.getenv("APPDATA"), "CASI", "token_cache.json")
         if not os.path.exists(cache_path):
-            message = "Hi! I'm CASI your AI virtual assistant, providing support that never sleeps. How can I help? 😊"
+            # Welcome message for new users
+            welcome_messages = [
+                "🚀 **Welcome to CASI!** I'm your AI virtual assistant, providing IT support that never sleeps. How can I help you today? 💻✨",
+                "🌟 **Hello there!** I'm CASI - your dedicated IT Support Assistant. Ready to solve any technical challenges you might have! 🔧💡",
+                "🎯 **Welcome aboard!** I'm CASI, your AI-powered IT companion. Let's tackle those tech issues together! 🚀💻",
+                "✨ **Greetings!** I'm CASI, your intelligent IT Support Assistant. What technical problem can I help you solve today? 🎯🔧"
+            ]
+            import random
+            message = random.choice(welcome_messages)
             self.add_message_bubble(message, sender="bot")
         else:
             client_id = "f8c7220e-feea-4490-bd93-d348b8bc023a"
@@ -1061,7 +1069,16 @@ class ChatbotWidget(QWidget):
             user_name = self.fetch_user_profile(access_token)
             self.user_pixmap = self.default_user_pixmap  # Set default first
             self.fetch_user_photo(access_token)           # Fetch and set Office 365 photo
-            message = f"Hi {user_name}! I'm CASI your AI virtual assistant, providing support that never sleeps. How can I help? 😊"
+            
+            # Personalized welcome messages for returning users
+            personalized_messages = [
+                f"🎉 **Welcome back, {user_name}!** I'm CASI, your AI IT Support Assistant. Great to see you again! What can I help you with today? 💻✨",
+                f"🌟 **Hello {user_name}!** I'm CASI, your dedicated IT companion. Ready to tackle any technical challenges? 🔧💡",
+                f"🚀 **Good to see you, {user_name}!** I'm CASI, your intelligent IT Support Assistant. What tech issues need solving today? 🎯🔧",
+                f"✨ **Welcome back, {user_name}!** I'm CASI, your AI-powered IT helper. Let's get those technical problems sorted! 💻🎯"
+            ]
+            import random
+            message = random.choice(personalized_messages)
             self.add_message_bubble(message, sender="bot")
 
         # After login, check if admin and show/hide KB button
@@ -1559,74 +1576,88 @@ class ChatbotWidget(QWidget):
         scroll_area.verticalScrollBar().setValue(scroll_area.verticalScrollBar().maximum())
 
     def show_typing_indicator(self):
-        """Show CASI typing indicator with enhanced clean design"""
+        """Show CASI typing indicator with enhanced engaging design and dynamic animations"""
         # Create typing indicator container
         typing_container = QWidget()
         typing_container.setObjectName("typing_indicator")
-        typing_container.setFixedHeight(60)
+        typing_container.setFixedHeight(70)  # Increased height for better visual impact
         
         # Main layout with proper spacing
         typing_layout = QHBoxLayout(typing_container)
-        typing_layout.setSpacing(12)
-        typing_layout.setContentsMargins(16, 8, 16, 8)
+        typing_layout.setSpacing(15)
+        typing_layout.setContentsMargins(18, 10, 18, 10)
         typing_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-        # Enhanced CASI logo with modern styling
+        # Enhanced CASI logo with pulsing animation
         logo_container = QWidget()
-        logo_container.setFixedSize(40, 40)
+        logo_container.setFixedSize(44, 44)
         logo_container.setObjectName("typing_logo_container")
         
         logo_label = QLabel(logo_container)
         logo_pixmap = QPixmap("CASInew-nbg.png")
         if not logo_pixmap.isNull():
-            logo_label.setPixmap(logo_pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        logo_label.setFixedSize(32, 32)
+            logo_label.setPixmap(logo_pixmap.scaled(36, 36, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        logo_label.setFixedSize(36, 36)
         logo_label.move(4, 4)
         
-        # Modern logo styling with subtle shadow and border
+        # Enhanced logo styling with gradient and pulsing effect
         logo_container.setStyleSheet("""
             QWidget#typing_logo_container {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff, stop:1 #f8f9fa);
-                border: 1px solid #e9ecef;
-                border-radius: 20px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                    stop:0 #ffffff, stop:1 #f0f8ff);
+                border: 2px solid #4a90e2;
+                border-radius: 22px;
+                box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
             }
         """)
 
-        # Typing message with clean, modern design
-        typing_label = QLabel("CASI is thinking")
+        # Dynamic typing messages with engaging content
+        typing_messages = [
+            "🔍 **CASI is analyzing** your request...",
+            "💭 **CASI is thinking** of the best solution...",
+            "⚡ **CASI is processing** your query...",
+            "🎯 **CASI is crafting** your response...",
+            "🚀 **CASI is preparing** the perfect answer...",
+            "✨ **CASI is working** on your solution...",
+            "💡 **CASI is brainstorming** ideas...",
+            "🌟 **CASI is gathering** information..."
+        ]
+        
+        typing_label = QLabel("🔍 **CASI is analyzing** your request...")
         typing_label.setWordWrap(True)
-        typing_label.setMaximumWidth(450)  # Increased to match new message bubble width
-        typing_label.setMinimumWidth(280)   # Increased to match new message bubble width
+        typing_label.setMaximumWidth(480)  # Increased to match new message bubble width
+        typing_label.setMinimumWidth(300)   # Increased to match new message bubble width
         typing_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         typing_label.setObjectName("typing_message")
         
-        # Clean, modern styling
+        # Enhanced modern styling with gradient background
         typing_label.setStyleSheet("""
             QLabel#typing_message {
-                background: #ffffff;
-                color: #6c757d;
-                border: 1px solid #e9ecef;
-                border-radius: 18px;
-                padding: 16px 20px;  /* Increased padding to match message bubbles */
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ffffff, stop:1 #f8f9ff);
+                color: #495057;
+                border: 1px solid #e3f2fd;
+                border-radius: 20px;
+                padding: 18px 22px;
                 font-size: 14px;
                 font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-                font-weight: 400;
-                line-height: 1.6;  /* Increased line height to match message bubbles */
-                min-height: 24px;
+                font-weight: 500;
+                line-height: 1.6;
+                min-height: 26px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             }
         """)
 
-        # Animated typing dots
+        # Enhanced animated typing dots with different styles
         dots_label = QLabel("")
         dots_label.setObjectName("typing_dots")
         dots_label.setStyleSheet("""
             QLabel#typing_dots {
-                color: #6c757d;
-                font-size: 16px;
-                font-weight: 300;
-                margin-left: 4px;
+                color: #4a90e2;
+                font-size: 18px;
+                font-weight: 600;
+                margin-left: 6px;
+                min-width: 30px;
             }
         """)
 
@@ -1636,120 +1667,156 @@ class ChatbotWidget(QWidget):
         typing_layout.addWidget(dots_label)
         typing_layout.addStretch()
 
-        # Enhanced animation system
+        # Enhanced animation system with multiple phases and engaging content
         self.typing_animation_timer = QTimer()
         self.typing_phase = 0
         self.typing_dots_count = 0
+        self.typing_message_index = 0
         
         def update_typing_animation():
-            # Phase 1: "thinking" (2 seconds)
-            # Phase 2: "typing" with animated dots (continuous)
+            # Phase 1: "analyzing" (1.5 seconds)
+            # Phase 2: "thinking" (1.5 seconds)  
+            # Phase 3: "processing" (1.5 seconds)
+            # Phase 4: "typing" with animated dots (continuous)
+            
             if self.typing_phase == 0:
-                typing_label.setText("CASI is thinking")
+                typing_label.setText("🔍 **CASI is analyzing** your request...")
                 self.typing_phase = 1
             elif self.typing_phase == 1:
-                typing_label.setText("CASI is typing")
+                typing_label.setText("💭 **CASI is thinking** of the best solution...")
                 self.typing_phase = 2
+            elif self.typing_phase == 2:
+                typing_label.setText("⚡ **CASI is processing** your query...")
+                self.typing_phase = 3
+            elif self.typing_phase == 3:
+                typing_label.setText("🎯 **CASI is crafting** your response...")
+                self.typing_phase = 4
+            elif self.typing_phase == 4:
+                typing_label.setText("✨ **CASI is working** on your solution...")
+                self.typing_phase = 5
+            elif self.typing_phase >= 5:
+                # Rotate through engaging messages
+                message = typing_messages[self.typing_message_index % len(typing_messages)]
+                typing_label.setText(message)
+                self.typing_message_index += 1
             
-            # Animate dots
+            # Enhanced dots animation with different patterns
             if self.typing_phase >= 1:
-                dots = "●" * (self.typing_dots_count % 4)
+                dot_patterns = ["●", "●●", "●●●", "●●●●", "●●●", "●●", "●", ""]
+                dots = dot_patterns[self.typing_dots_count % len(dot_patterns)]
                 dots_label.setText(dots)
                 self.typing_dots_count += 1
         
         self.typing_animation_timer.timeout.connect(update_typing_animation)
         self.typing_animation_timer.start(500)  # Smooth, not too fast
 
-        # Subtle logo breathing animation
+        # Enhanced logo breathing animation with proper scaling
         self.logo_breathing_timer = QTimer()
         self.logo_scale = 1.0
         self.logo_breathing_direction = 1
         
         def update_logo_breathing():
             if self.logo_breathing_direction == 1:
-                self.logo_scale += 0.005
-                if self.logo_scale >= 1.02:
-                    self.logo_scale = 1.02
+                self.logo_scale += 0.003
+                if self.logo_scale >= 1.015:
+                    self.logo_scale = 1.015
                     self.logo_breathing_direction = -1
             else:
-                self.logo_scale -= 0.005
-                if self.logo_scale <= 0.98:
-                    self.logo_scale = 0.98
+                self.logo_scale -= 0.003
+                if self.logo_scale <= 0.985:
+                    self.logo_scale = 0.985
                     self.logo_breathing_direction = 1
             
-            # Apply subtle scale effect
-            logo_container.setFixedSize(int(40 * self.logo_scale), int(40 * self.logo_scale))
-            logo_label.setFixedSize(int(32 * self.logo_scale), int(32 * self.logo_scale))
+            # Apply subtle scale effect with proper sizing
+            new_size = int(44 * self.logo_scale)
+            logo_container.setFixedSize(new_size, new_size)
+            logo_label.setFixedSize(int(36 * self.logo_scale), int(36 * self.logo_scale))
             logo_label.move(int(4 * self.logo_scale), int(4 * self.logo_scale))
         
         self.logo_breathing_timer.timeout.connect(update_logo_breathing)
-        self.logo_breathing_timer.start(80)  # Very subtle breathing
+        self.logo_breathing_timer.start(100)  # Smooth breathing effect
 
-        # Add subtle pulse effect to typing message
+        # Enhanced message pulse effect with gradient
         self.message_pulse_timer = QTimer()
-        self.message_scale = 1.0
-        self.message_pulse_direction = 1
+        self.message_pulse_phase = 0
         
         def update_message_pulse():
-            if self.message_pulse_direction == 1:
-                self.message_scale += 0.002
-                if self.message_scale >= 1.01:
-                    self.message_scale = 1.01
-                    self.message_pulse_direction = -1
-            else:
-                self.message_scale -= 0.002
-                if self.message_scale <= 0.99:
-                    self.message_scale = 0.99
-                    self.message_pulse_direction = 1
+            # Create subtle color shift effect
+            colors = [
+                "#f8f9ff", "#f0f8ff", "#e8f4ff", "#e0f0ff", 
+                "#d8ecff", "#e0f0ff", "#e8f4ff", "#f0f8ff"
+            ]
+            current_color = colors[self.message_pulse_phase % len(colors)]
             
-            # Apply very subtle scale effect to typing message
+            # Update styling with subtle color shift
             typing_label.setStyleSheet(f"""
                 QLabel#typing_message {{
-                    background: #ffffff;
-                    color: #6c757d;
-                    border: 1px solid #e9ecef;
-                    border-radius: 18px;
-                    padding: 16px 20px;
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #ffffff, stop:1 {current_color});
+                    color: #495057;
+                    border: 1px solid #e3f2fd;
+                    border-radius: 20px;
+                    padding: 18px 22px;
                     font-size: 14px;
                     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-weight: 400;
-                    line-height: 1.6;  /* Increased line height to match message bubbles */
-                    min-height: 24px;
-                    transform: scale({self.message_scale});
+                    font-weight: 500;
+                    line-height: 1.6;
+                    min-height: 26px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
                 }}
             """)
+            
+            self.message_pulse_phase += 1
         
         self.message_pulse_timer.timeout.connect(update_message_pulse)
-        self.message_pulse_timer.start(120)  # Very subtle pulse
+        self.message_pulse_timer.start(200)  # Smooth color transition
 
-        # Add to chat display
+        # Add to chat display with enhanced styling
         typing_container.setStyleSheet("""
             QWidget#typing_indicator {
                 background: transparent;
-                margin: 8px 0px;
+                margin: 10px 0px;
+                border-radius: 20px;
             }
         """)
         
         self.chat_display_layout.addWidget(typing_container)
         
-        # Add entrance animation with fade-in effect
+        # Enhanced entrance animation with slide-in and fade-in effects
         fade_in_effect = QGraphicsOpacityEffect(typing_container)
         typing_container.setGraphicsEffect(fade_in_effect)
         fade_in_effect.setOpacity(0.0)
         
-        # Animate fade in
+        # Start position for slide-in effect
+        original_pos = typing_container.pos()
+        typing_container.move(original_pos.x() - 20, original_pos.y())
+        
+        # Animate fade in and slide in
         fade_in_animation = QPropertyAnimation(fade_in_effect, b"opacity")
-        fade_in_animation.setDuration(300)
+        fade_in_animation.setDuration(400)
         fade_in_animation.setStartValue(0.0)
         fade_in_animation.setEndValue(1.0)
         fade_in_animation.setEasingCurve(QEasingCurve.OutCubic)
+        
+        # Slide-in animation
+        slide_animation = QPropertyAnimation(typing_container, b"pos")
+        slide_animation.setDuration(400)
+        slide_animation.setStartValue(typing_container.pos())
+        slide_animation.setEndValue(original_pos)
+        slide_animation.setEasingCurve(QEasingCurve.OutBack)
+        
+        # Start both animations
         fade_in_animation.start()
+        slide_animation.start()
         
         # Smooth scroll to show typing indicator
-        QTimer.singleShot(100, lambda: self.scroll_to_bottom())
+        QTimer.singleShot(150, lambda: self.scroll_to_bottom())
+        
+        # Store reference for cleanup
+        self.current_typing_container = typing_container
 
     def hide_typing_indicator(self):
-        """Remove CASI typing indicator with smooth cleanup"""
+        """Remove CASI typing indicator with smooth exit animation"""
         # Stop all animation timers
         if hasattr(self, 'typing_animation_timer') and self.typing_animation_timer.isActive():
             self.typing_animation_timer.stop()
@@ -1758,14 +1825,48 @@ class ChatbotWidget(QWidget):
         if hasattr(self, 'message_pulse_timer') and self.message_pulse_timer.isActive():
             self.message_pulse_timer.stop()
         
-        # Find and remove typing indicator immediately
+        # Find typing indicator for smooth exit animation
+        typing_widget = None
         for i in range(self.chat_display_layout.count()):
             widget = self.chat_display_layout.itemAt(i).widget()
             if widget and widget.objectName() == "typing_indicator":
-                # Remove immediately without complex animations
-                widget.deleteLater()
-                logging.info("Typing indicator removed successfully")
+                typing_widget = widget
                 break
+        
+        if typing_widget:
+            # Create smooth exit animation
+            fade_out_effect = QGraphicsOpacityEffect(typing_widget)
+            typing_widget.setGraphicsEffect(fade_out_effect)
+            
+            # Slide-out and fade-out animation
+            original_pos = typing_widget.pos()
+            slide_out_pos = QPoint(original_pos.x() - 30, original_pos.y())
+            
+            # Fade out animation
+            fade_out_animation = QPropertyAnimation(fade_out_effect, b"opacity")
+            fade_out_animation.setDuration(300)
+            fade_out_animation.setStartValue(1.0)
+            fade_out_animation.setEndValue(0.0)
+            fade_out_animation.setEasingCurve(QEasingCurve.InCubic)
+            
+            # Slide out animation
+            slide_out_animation = QPropertyAnimation(typing_widget, b"pos")
+            slide_out_animation.setDuration(300)
+            slide_out_animation.setStartValue(original_pos)
+            slide_out_animation.setEndValue(slide_out_pos)
+            slide_out_animation.setEasingCurve(QEasingCurve.InCubic)
+            
+            # Connect animation finished signal to cleanup
+            def cleanup_typing_indicator():
+                typing_widget.deleteLater()
+                logging.info("Typing indicator removed with smooth animation")
+            
+            fade_out_animation.finished.connect(cleanup_typing_indicator)
+            
+            # Start both animations
+            fade_out_animation.start()
+            slide_out_animation.start()
+            
         else:
             logging.warning("Typing indicator not found for removal")
 
