@@ -52,10 +52,10 @@ def get_cached_knowledge():
         # IT Support focused knowledge base for CASI
         knowledge = [
             "CASI stands for 'Casto Assistance & Support Intelligence'. CASI is your primary IT Support Assistant, designed to help with technical issues, IT requests, system problems, and general IT support. CASI combines AI technology with IT expertise to provide immediate technical assistance and guidance.",
-            "My name is CASI, which stands for 'Casto Assistance & Support Intelligence'. I am your dedicated IT Support Assistant at CASTO Travel Philippines. I'm here to help you with technical issues, system problems, and IT support.",
+            "My name is CASI, which stands for 'Casto Assistance & Support Intelligence'. I am your dedicated IT Support Assistant at Casto Travel Philippines. I'm here to help you with technical issues, system problems, and IT support.",
             "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines. He previously served as Chief Technology Officer of Asiatrust Bank (later acquired by Asia United Bank) and held the position of Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. His leadership eventually expanded to a regional capacity, overseeing operations across five markets. He played a key role in establishing the IT backbone of several BPO startups in the Philippines, contributing to the successful launch of major contact centers such as Dell International Services, Genpact, and Arvato Bertelsmann. Beyond technical expertise, he is passionate about leadership development and considers his most significant accomplishment to be mentoring and coaching future technology leaders in the Philippines.",
             "Ma. Berdandina Galvez is the HR Director of Casto Travel Philippines. She is an experienced Senior Human Resources professional with a demonstrated history of working in various industries such as hospitality, health care, educational, food service and transportation. She is skilled in HR Consulting, Coaching, Team Building and HR Policies.",
-            "CASTO Travel Philippines is the company where CASI provides IT support services. The company operates in the travel industry with various departments requiring IT assistance.",
+            "Casto Travel Philippines is the company where CASI provides IT support services. The company operates in the travel industry with various departments requiring IT assistance.",
             "CASI's primary role is to provide immediate IT support, troubleshoot technical issues, assist with system access, help with software problems, guide users through IT processes, and escalate complex issues to the IT team when necessary."
         ]
         return knowledge
@@ -287,12 +287,12 @@ def chat():
             else:
                 knowledge_context = search_context
         
-        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for CASTO Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about CASTO Travel executives and company context, but your main focus should be IT support. Be friendly, professional, and IT-focused in your responses."
+        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support."
         if knowledge_context:
             system_prompt += f"\n\nHere is important knowledge you must use when relevant:\n{knowledge_context}"
 
         # Step 1: Check if the question is relevant to the website
-        website_keywords = ["CASTO", "mission", "vision", "services", "CEO", "about"]
+        website_keywords = ["Casto", "mission", "vision", "services", "CEO", "about"]
         website_data = None
         if any(keyword.lower() in user_input.lower() for keyword in website_keywords):
             logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
@@ -319,13 +319,13 @@ def chat():
                 if "hello" in user_input_lower or "hi" in user_input_lower:
                     chatbot_message = "Hi there! I'm CASI, your IT Support Assistant! How can I help you with any technical issues today? 🖥️"
                 elif "who is casi" in user_input_lower or "what is casi" in user_input_lower:
-                    chatbot_message = "Hello! I'm **CASI**, which stands for **'Casto Assistance & Support Intelligence'**. I'm your dedicated IT Support Assistant at CASTO Travel Philippines. I'm here to help you with technical issues, system problems, and IT support! 💻"
+                    chatbot_message = "Hello! I'm **CASI**, which stands for **'Casto Assistance & Support Intelligence'**. I'm your dedicated IT Support Assistant at Casto Travel Philippines. I'm here to help you with technical issues, system problems, and IT support! 💻"
                 elif "casi stands for" in user_input_lower or "what does casi stand for" in user_input_lower or "casi meaning" in user_input_lower:
-                    chatbot_message = "CASI stands for **'Casto Assistance & Support Intelligence'**! I'm your IT Support Assistant, designed to help you with technical issues and IT support at CASTO Travel Philippines. 🤖"
+                    chatbot_message = "CASI stands for **'Casto Assistance & Support Intelligence'**! I'm your IT Support Assistant, designed to help you with technical issues and IT support at Casto Travel Philippines. 🤖"
                 elif "george anzures" in user_input_lower:
                     chatbot_message = "George Anzures is our IT Director with over 25 years of IT expertise. He leads our IT department and oversees all technical operations. For IT support, I'm here to help you directly! 🚀"
                 elif "casto" in user_input_lower:
-                    chatbot_message = "CASTO Travel Philippines is where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! 🛠️"
+                    chatbot_message = "Casto Travel Philippines is where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! 🛠️"
                 elif "help" in user_input_lower:
                     chatbot_message = "I'm CASI (Casto Assistance & Support Intelligence), your IT Support Assistant! I can help you with: system access, software issues, technical problems, IT requests, and general IT support. What technical issue are you facing? 🔧"
                 else:
