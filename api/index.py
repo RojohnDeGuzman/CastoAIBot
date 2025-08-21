@@ -195,8 +195,8 @@ def validate_executive_info(query, response):
             
             if exec_name in query.lower() and correct_title not in response.lower():
                 logging.warning(f"Response may contain incorrect position for {exec_name}. Expected: {correct_title}")
-                return False
-        
+        return False
+    
         return True
     except Exception as e:
         logging.error(f"Error validating executive info: {str(e)}")
@@ -213,7 +213,7 @@ def get_conversation_context(user_id):
     except Exception as e:
         logging.error(f"Error getting conversation context: {str(e)}")
         return None
-
+    
 def update_conversation_context(user_id, context):
     """Update conversation context for a user"""
     try:
@@ -231,7 +231,7 @@ def get_accurate_executive_info(exec_name):
             if exec_info.get("name", "").lower() == exec_name_lower:
                 return exec_info
         
-        return None
+                return None
     except Exception as e:
         logging.error(f"Error getting accurate executive info: {str(e)}")
         return None
@@ -331,7 +331,7 @@ def search_knowledge(query, knowledge_entries=None):
         
         # Return top 5 most relevant results (increased from 3)
         return results[:5]
-        
+
     except Exception as e:
         logging.error(f"Error in knowledge search: {str(e)}")
         return []
@@ -655,9 +655,9 @@ def chat():
                     else:
                         chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
                 
-                logging.info("Using fallback response (AI client not available)")
+                    logging.info("Using fallback response (AI client not available)")
 
-                        # Combine the chatbot's response with the website's response (only if relevant)
+            # Combine the chatbot's response with the website's response (only if relevant)
             combined_response = chatbot_message
             if website_data and "No relevant information found" not in website_data:
                 # Only add website data if it contains meaningful, specific information
@@ -681,7 +681,7 @@ def chat():
         except Exception as e:
             logging.error(f"Error during chatbot response: {str(e)}")
             return jsonify({"error": str(e)}), 500
-    
+
     except Exception as e:
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
