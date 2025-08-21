@@ -572,11 +572,13 @@ def chat():
         # Add knowledge base priority enforcement
         system_prompt += f"\n\nKNOWLEDGE BASE PRIORITY ENFORCEMENT:\n- Your knowledge base is the ONLY source of truth for company information\n- NEVER contradict information from your knowledge base\n- If asked about executives, ONLY use the exact information from your knowledge base\n- George Anzures is ALWAYS the IT Director, never any other position\n- If website or other sources contradict your knowledge base, IGNORE them and use your knowledge base\n- Always state that information comes from your verified knowledge base\n- CREATOR INFORMATION: You were created by the Casto IT department. Only mention Rojohn Michael De Guzman if specifically asked who built/created you"
 
-        # Step 1: Check if the question is relevant to the website
-        website_keywords = ["Casto", "mission", "vision", "services", "CEO", "about"]
+        # Step 1: Check if the question is relevant to the website (more selective)
+        website_keywords = ["mission", "vision", "services", "about us", "company info", "what does casto do"]
         website_data = None
-        if any(keyword.lower() in user_input.lower() for keyword in website_keywords):
-            logging.info(f"Checking website ({WEBSITE_SOURCE}) for user query: {user_input}")
+        # Only fetch website data for specific company information queries, not for executive queries
+        if (any(keyword.lower() in user_input.lower() for keyword in website_keywords) and 
+            not any(exec_name.lower() in user_input.lower() for exec_name in ["maryles", "marc", "alwin", "george", "berdandina", "elaine"])):
+            logging.info(f"Checking website for company information query: {user_input}")
             website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
 
         # Step 3: Get a response from the chatbot
@@ -655,10 +657,20 @@ def chat():
                 
                 logging.info("Using fallback response (AI client not available)")
 
-                        # Combine the chatbot's response with the website's response
+                        # Combine the chatbot's response with the website's response (only if relevant)
             combined_response = chatbot_message
             if website_data and "No relevant information found" not in website_data:
-                combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
+                # Only add website data if it contains meaningful, specific information
+                if any(keyword in website_data.lower() for keyword in ["mission", "vision", "services", "about", "company"]):
+                    # Check if the website data is actually relevant to the user's query
+                    if any(query_word in website_data.lower() for query_word in user_input.lower().split() if len(query_word) > 3):
+                        combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
+                    else:
+                        # Website data exists but not relevant to this specific query
+                        logging.info("Website data available but not relevant to user query - skipping")
+                else:
+                    # Generic website content - don't add it
+                    logging.info("Generic website content detected - not adding to response")
             
             # Update conversation context for continuity
             current_context = f"User Query: {user_input}\nCASI Response: {combined_response}"
