@@ -14,14 +14,20 @@ CORS(app)
 # Get API key from environment variable for Vercel
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY environment variable is required")
-
-# Setup OpenAI-style client for Groq
-client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=GROQ_API_KEY
-)
+# Setup OpenAI-style client for Groq (only if API key is available)
+client = None
+if GROQ_API_KEY:
+    try:
+        client = OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=GROQ_API_KEY
+        )
+        logging.info("✅ Groq AI client initialized successfully")
+    except Exception as e:
+        logging.error(f"❌ Failed to initialize Groq AI client: {str(e)}")
+        client = None
+else:
+    logging.warning("⚠️ GROQ_API_KEY not found - AI responses will be limited")
 
 # Define the website source
 WEBSITE_SOURCE = "https://www.travelpress.com/"
@@ -199,18 +205,36 @@ def chat():
 
         # Step 3: Get a response from the chatbot
         try:
-            logging.info("Fetching response from the chatbot.")
-            response = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                temperature=0.7
-            )
+            if client:
+                logging.info("Fetching response from the chatbot.")
+                response = client.chat.completions.create(
+                    model="llama3-8b-8192",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_input}
+                    ],
+                    temperature=0.7
+                )
 
-            chatbot_message = response.choices[0].message.content
-            logging.info("Answer fetched from the chatbot.")
+                chatbot_message = response.choices[0].message.content
+                logging.info("Answer fetched from the chatbot.")
+            else:
+                # Fallback responses when AI client is not available
+                user_input_lower = user_input.lower()
+                if "hello" in user_input_lower or "hi" in user_input_lower:
+                    chatbot_message = "Hi there! I'm CASI! What can I do for you? 🎯"
+                elif "who is casi" in user_input_lower:
+                    chatbot_message = "Hello! I'm **CASI**, your AI virtual assistant. I'm here to help you with any questions or support you need! 😊"
+                elif "george anzures" in user_input_lower:
+                    chatbot_message = "George Anzures is the IT Director of Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries."
+                elif "casto" in user_input_lower:
+                    chatbot_message = "CASTO Travel Philippines is a travel company. I can help you with information about our services, team, or any other questions you might have!"
+                elif "help" in user_input_lower:
+                    chatbot_message = "I'm CASI, your helpful AI assistant! I'm here to help you with any questions or support you need. How can I assist you today? 😊"
+                else:
+                    chatbot_message = "I'm CASI, your AI assistant! I'm ready to help you with any questions about CASTO Travel, our team, or anything else you need. What would you like to know? 🚀"
+                
+                logging.info("Using fallback response (AI client not available)")
 
             # Combine the chatbot's response with the website's response
             combined_response = chatbot_message
@@ -265,7 +289,9 @@ def health_check():
         "status": "success",
         "message": "CASI Backend is running on Vercel",
         "api_key_configured": bool(GROQ_API_KEY),
+        "ai_client_available": bool(client),
         "authentication": "Anonymous users allowed for chat",
+        "note": "If AI client is not available, fallback responses will be used",
         "endpoints": {
             "chat": "POST /chat - General chat (anonymous users allowed)",
             "it_on_duty": "POST /it-on-duty - IT support (requires auth)",
