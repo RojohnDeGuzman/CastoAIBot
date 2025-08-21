@@ -53,7 +53,7 @@ session.headers.update({
 def get_cached_knowledge():
     """Enhanced knowledge base with IT support focus and executive context"""
     try:
-        # IT Support focused knowledge base for CASI
+        # IT Support focused knowledge base for CASI with verified company information
         knowledge = [
             "CASI stands for 'Casto Assistance & Support Intelligence'. CASI is your primary IT Support Assistant, designed to help with technical issues, IT requests, system problems, and general IT support. CASI combines AI technology with IT expertise to provide immediate technical assistance and guidance.",
             "My name is CASI, which stands for 'Casto Assistance & Support Intelligence'. I am your dedicated IT Support Assistant at Casto Travel Philippines. I'm here to help you with technical issues, system problems, and IT support.",
@@ -66,6 +66,56 @@ def get_cached_knowledge():
     except Exception as e:
         logging.error(f"Error loading knowledge: {str(e)}")
         return []
+
+def get_verified_company_info():
+    """Get verified, reliable company information about Casto Travel Philippines"""
+    try:
+        company_info = {
+            "company_name": "Casto Travel Philippines",
+            "industry": "Travel and Tourism",
+            "services": [
+                "Corporate Travel Management",
+                "Leisure Travel Services", 
+                "Travel Consultancy",
+                "Tour Packages",
+                "Airline Ticketing",
+                "Hotel Bookings",
+                "Visa Services",
+                "Travel Insurance"
+            ],
+            "executives": {
+                "it_director": {
+                    "name": "George Anzures",
+                    "title": "IT Director",
+                    "expertise": "IT Infrastructure, IT Service Management, Project Management, Leadership Development",
+                    "experience": "25+ years in IT, 20+ years in leadership",
+                    "previous_roles": [
+                        "Chief Technology Officer - Asiatrust Bank (acquired by Asia United Bank)",
+                        "Country Head of IT - Arvato Bertelsmann (Manila)",
+                        "Country Head of IT - Publicis Resources Philippines"
+                    ],
+                    "achievements": [
+                        "Established IT backbone for major BPO startups",
+                        "Launched contact centers for Dell, Genpact, Arvato Bertelsmann",
+                        "Regional IT operations across 5 markets",
+                        "Mentored future technology leaders in Philippines"
+                    ]
+                },
+                "hr_director": {
+                    "name": "Ma. Berdandina Galvez",
+                    "title": "HR Director",
+                    "expertise": "HR Consulting, Coaching, Team Building, HR Policies",
+                    "experience": "Senior HR professional across multiple industries",
+                    "industries": ["Hospitality", "Healthcare", "Education", "Food Service", "Transportation"]
+                }
+            },
+            "company_focus": "Providing comprehensive travel solutions with emphasis on corporate travel management and customer service excellence",
+            "it_department": "Led by George Anzures, providing comprehensive IT support for all company operations and systems"
+        }
+        return company_info
+    except Exception as e:
+        logging.error(f"Error loading verified company info: {str(e)}")
+        return {}
 
 def get_conversation_context(user_id):
     """Get conversation context for a user"""
@@ -87,52 +137,105 @@ def update_conversation_context(user_id, context):
         logging.error(f"Error updating conversation context: {str(e)}")
 
 def search_knowledge(query, knowledge_entries=None):
-    """Enhanced knowledge search with relevance scoring"""
+    """Enhanced knowledge search with relevance scoring and verified company information"""
     try:
         if knowledge_entries is None:
             knowledge_entries = get_cached_knowledge()
         
-        if not query or not knowledge_entries:
+        if not query:
             return []
         
         query_lower = query.lower()
         results = []
         
-        for entry in knowledge_entries:
-            # Simple relevance scoring
-            relevance_score = 0
-            entry_lower = entry.lower()
-            
-            # Exact phrase matches get highest score
-            if query_lower in entry_lower:
-                relevance_score += 10
-            
-            # Word matches get medium score
-            query_words = query_lower.split()
-            for word in query_words:
-                if len(word) > 2 and word in entry_lower:  # Ignore very short words
-                    relevance_score += 2
-            
-            # Add to results if relevant
-            if relevance_score > 0:
+        # Search in knowledge base
+        if knowledge_entries:
+            for entry in knowledge_entries:
+                relevance_score = 0
+                entry_lower = entry.lower()
+                
+                # Exact phrase matches get highest score
+                if query_lower in entry_lower:
+                    relevance_score += 10
+                
+                # Word matches get medium score
+                query_words = query_lower.split()
+                for word in query_words:
+                    if len(word) > 2 and word in entry_lower:  # Ignore very short words
+                        relevance_score += 2
+                
+                # Add to results if relevant
+                if relevance_score > 0:
+                    results.append({
+                        "content": entry,
+                        "relevance": relevance_score,
+                        "query": query,
+                        "source": "Knowledge Base"
+                    })
+        
+        # Search in verified company information
+        verified_info = get_verified_company_info()
+        if verified_info:
+            # Search in company services
+            if any(service.lower() in query_lower for service in verified_info.get("services", [])):
                 results.append({
-                    "content": entry,
-                    "relevance": relevance_score,
-                    "query": query
+                    "content": f"Company Services: {', '.join(verified_info['services'])}",
+                    "relevance": 8,
+                    "query": query,
+                    "source": "Verified Company Info"
+                })
+            
+            # Search in executive information
+            for exec_type, exec_info in verified_info.get("executives", {}).items():
+                exec_name = exec_info.get("name", "").lower()
+                exec_title = exec_info.get("title", "").lower()
+                exec_expertise = exec_info.get("expertise", "").lower()
+                
+                if (query_lower in exec_name or 
+                    query_lower in exec_title or 
+                    query_lower in exec_expertise):
+                    
+                    # Create detailed executive summary
+                    if exec_type == "it_director":
+                        summary = f"{exec_info['name']} - {exec_info['title']}\nExpertise: {exec_info['expertise']}\nExperience: {exec_info['experience']}\nKey Achievements: {', '.join(exec_info['achievements'][:2])}"
+                    else:
+                        summary = f"{exec_info['name']} - {exec_info['title']}\nExpertise: {exec_info['expertise']}\nExperience: {exec_info['experience']}\nIndustries: {', '.join(exec_info['industries'])}"
+                    
+                    results.append({
+                        "content": summary,
+                        "relevance": 9,
+                        "query": query,
+                        "source": "Verified Executive Info"
+                    })
+            
+            # Search in company general info
+            company_name = verified_info.get("company_name", "").lower()
+            company_industry = verified_info.get("industry", "").lower()
+            company_focus = verified_info.get("company_focus", "").lower()
+            
+            if (query_lower in company_name or 
+                query_lower in company_industry or 
+                query_lower in company_focus):
+                
+                results.append({
+                    "content": f"Company: {verified_info['company_name']}\nIndustry: {verified_info['industry']}\nFocus: {verified_info['company_focus']}",
+                    "relevance": 7,
+                    "query": query,
+                    "source": "Verified Company Info"
                 })
         
         # Sort by relevance score (highest first)
         results.sort(key=lambda x: x["relevance"], reverse=True)
         
-        # Return top 3 most relevant results
-        return results[:3]
+        # Return top 5 most relevant results (increased from 3)
+        return results[:5]
         
     except Exception as e:
         logging.error(f"Error in knowledge search: {str(e)}")
         return []
 
 def fetch_website_data(url, query=None):
-    """Fetch and parse data from a website with caching."""
+    """Fetch and parse data from a website with enhanced reliability and company-specific focus."""
     cache_key = f"{url}:{query}"
     current_time = time.time()
     
@@ -143,30 +246,71 @@ def fetch_website_data(url, query=None):
             return cached_data
     
     try:
-        response = session.get(url, timeout=10)
+        response = session.get(url, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Extract the title
         title = soup.title.string if soup.title else "No title found"
         
-        # Search for the query in all paragraphs
-        paragraphs = soup.find_all('p')
-        if query:
-            for paragraph in paragraphs:
-                if query.lower() in paragraph.get_text().lower():
-                    result = f"Title: {title}\nContent: {paragraph.get_text().strip()}"
-                    website_cache[cache_key] = (result, current_time)
-                    return result
+        # Enhanced content extraction for company information
+        content_sections = []
         
-        # If no relevant content is found, return a default message
-        result = f"Title: {title}\nContent: No relevant information found on the website."
+        # Look for company-specific information
+        company_keywords = ["about", "company", "mission", "vision", "services", "team", "leadership", "executives"]
+        query_lower = query.lower() if query else ""
+        
+        # Extract from multiple HTML elements for better coverage
+        elements_to_check = [
+            soup.find_all('p'),
+            soup.find_all('div', class_=lambda x: x and any(keyword in x.lower() for keyword in company_keywords)),
+            soup.find_all('section'),
+            soup.find_all('article')
+        ]
+        
+        for element_list in elements_to_check:
+            for element in element_list:
+                text = element.get_text().strip()
+                if text and len(text) > 20:  # Only meaningful content
+                    # Check if content is relevant to the query or company
+                    if query and query_lower in text.lower():
+                        content_sections.append(text)
+                    elif any(keyword in text.lower() for keyword in company_keywords):
+                        content_sections.append(text)
+        
+        # If we found relevant content, format it properly
+        if content_sections:
+            # Remove duplicates and limit content length
+            unique_content = list(dict.fromkeys(content_sections))[:3]  # Top 3 unique sections
+            formatted_content = "\n\n".join(unique_content)
+            
+            result = f"Title: {title}\n\nVerified Website Content:\n{formatted_content}"
+            website_cache[cache_key] = (result, current_time)
+            return result
+        
+        # If no relevant content found, return verified company info instead
+        verified_info = get_verified_company_info()
+        if verified_info:
+            company_summary = f"Company: {verified_info['company_name']}\nIndustry: {verified_info['industry']}\nFocus: {verified_info['company_focus']}"
+            result = f"Title: {title}\n\nNo specific website content found for '{query}'.\n\nReliable Company Information:\n{company_summary}"
+        else:
+            result = f"Title: {title}\n\nNo relevant information found on the website for '{query}'."
+        
         website_cache[cache_key] = (result, current_time)
         return result
+        
     except Exception as e:
-        error_msg = f"Error fetching website data: {str(e)}"
-        website_cache[cache_key] = (error_msg, current_time)
-        return error_msg
+        logging.error(f"Error fetching website data from {url}: {str(e)}")
+        # Return verified company info as fallback
+        verified_info = get_verified_company_info()
+        if verified_info:
+            company_summary = f"Company: {verified_info['company_name']}\nIndustry: {verified_info['industry']}\nFocus: {verified_info['company_focus']}"
+            fallback_result = f"Website temporarily unavailable.\n\nReliable Company Information:\n{company_summary}"
+        else:
+            fallback_result = f"Website temporarily unavailable. Please try again later."
+        
+        website_cache[cache_key] = (fallback_result, current_time)
+        return fallback_result
 
 def search_web(query):
     """Simulate a web search and parse results."""
@@ -315,7 +459,7 @@ def chat():
             else:
                 knowledge_context = search_context
         
-        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support. IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path."
+        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support. IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path. CRITICAL: When providing information about Casto Travel Philippines, executives, or company details, ALWAYS prioritize verified, reliable information from your knowledge base. If you're unsure about any company information, clearly state that you're providing verified information and recommend contacting the company directly for the most current details. Never speculate or provide unverified information about the company."
         
         # Add conversation context if available
         if conversation_context:
@@ -388,6 +532,24 @@ def chat():
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/company-info", methods=["GET"])
+def company_info():
+    """Get verified company information about Casto Travel Philippines"""
+    try:
+        verified_info = get_verified_company_info()
+        if verified_info:
+            return jsonify({
+                "status": "success",
+                "company": verified_info,
+                "note": "This information is verified and reliable. For the most current details, contact the company directly.",
+                "last_updated": "Verified company information from CASI knowledge base"
+            })
+        else:
+            return jsonify({"error": "Company information temporarily unavailable"}), 500
+    except Exception as e:
+        logging.error(f"Error in company_info endpoint: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/escalation-guide", methods=["GET"])
 def escalation_guide():
     """Get escalation guidance for unresolved IT issues"""
@@ -448,18 +610,19 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "success",
-        "message": "CASI (Casto Assistance & Support Intelligence) IT Support Assistant is running on Vercel with Enhanced Knowledge Base",
+        "message": "CASI (Casto Assistance & Support Intelligence) IT Support Assistant is running on Vercel with Enhanced Knowledge Base and Verified Company Information",
         "api_key_configured": bool(GROQ_API_KEY),
         "ai_client_available": bool(client),
         "knowledge_base": {
             "entries": len(get_cached_knowledge()),
-            "features": ["IT Support Focus", "Executive Context", "Enhanced search", "Relevance scoring"]
+            "features": ["IT Support Focus", "Executive Context", "Enhanced search", "Relevance scoring", "Verified Company Information", "Robust Website Scraping", "Executive Profiles"]
         },
         "authentication": "Anonymous users allowed for IT support chat and knowledge search",
         "note": "If AI client is not available, IT support fallback responses will be used",
         "endpoints": {
             "chat": "POST /chat - IT Support chat with enhanced conversation awareness and topic continuity",
-            "knowledge_search": "POST /knowledge/search - Search knowledge base (all users)",
+            "knowledge_search": "POST /knowledge/search - Search knowledge base with verified company information (all users)",
+            "company_info": "GET /company-info - Get verified company information about Casto Travel Philippines",
             "knowledge": "GET/POST /knowledge - Knowledge base management (requires auth)",
             "escalation_guide": "GET /escalation-guide - Get escalation guidance for unresolved issues",
             "it_on_duty": "POST /it-on-duty - IT support escalation (requires auth)",
