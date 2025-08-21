@@ -39,6 +39,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 website_cache = {}
 CACHE_DURATION = 300  # 5 minutes
 
+# Cache for conversation context
+conversation_cache = {}
+CONVERSATION_TIMEOUT = 1800  # 30 minutes
+
 # HTTP session for connection pooling
 session = requests.Session()
 session.headers.update({
@@ -62,6 +66,25 @@ def get_cached_knowledge():
     except Exception as e:
         logging.error(f"Error loading knowledge: {str(e)}")
         return []
+
+def get_conversation_context(user_id):
+    """Get conversation context for a user"""
+    try:
+        if user_id in conversation_cache:
+            context, timestamp = conversation_cache[user_id]
+            if time.time() - timestamp < CONVERSATION_TIMEOUT:
+                return context
+        return None
+    except Exception as e:
+        logging.error(f"Error getting conversation context: {str(e)}")
+        return None
+
+def update_conversation_context(user_id, context):
+    """Update conversation context for a user"""
+    try:
+        conversation_cache[user_id] = (context, time.time())
+    except Exception as e:
+        logging.error(f"Error updating conversation context: {str(e)}")
 
 def search_knowledge(query, knowledge_entries=None):
     """Enhanced knowledge search with relevance scoring"""
@@ -262,11 +285,16 @@ def chat():
         # Check if user is authenticated
         email = None
         is_authenticated = False
+        user_id = "anonymous"
         if access_token:
             email = get_user_email_from_token(access_token)
             if email and is_castotravel_user(email):
                 is_authenticated = True
+                user_id = email
                 logging.info(f"Authenticated user: {email}")
+        
+        # Get conversation context for continuity
+        conversation_context = get_conversation_context(user_id)
         
         # Use cached knowledge retrieval (only for authenticated users)
         knowledge_entries = []
@@ -287,7 +315,11 @@ def chat():
             else:
                 knowledge_context = search_context
         
-        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support."
+        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support. IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path."
+        
+        # Add conversation context if available
+        if conversation_context:
+            system_prompt += f"\n\nPrevious Conversation Context:\n{conversation_context}\n\nContinue from where you left off and maintain topic continuity."
         if knowledge_context:
             system_prompt += f"\n\nHere is important knowledge you must use when relevant:\n{knowledge_context}"
 
@@ -331,13 +363,21 @@ def chat():
                 else:
                     chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
                 
+                # Update conversation context for fallback responses too
+                current_context = f"User Query: {user_input}\nCASI Response: {chatbot_message}"
+                update_conversation_context(user_id, current_context)
+                
                 logging.info("Using fallback response (AI client not available)")
 
-            # Combine the chatbot's response with the website's response
+                        # Combine the chatbot's response with the website's response
             combined_response = chatbot_message
             if website_data and "No relevant information found" not in website_data:
                 combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
-
+            
+            # Update conversation context for continuity
+            current_context = f"User Query: {user_input}\nCASI Response: {combined_response}"
+            update_conversation_context(user_id, current_context)
+            
             return jsonify({"response": combined_response})
         
         except Exception as e:
@@ -347,6 +387,30 @@ def chat():
     except Exception as e:
         logging.error(f"Unexpected error in chat endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@app.route("/escalation-guide", methods=["GET"])
+def escalation_guide():
+    """Get escalation guidance for unresolved IT issues"""
+    return jsonify({
+        "escalation_options": [
+            {
+                "method": "Message IT On Duty",
+                "description": "Use the 'Message IT On Duty' button in the UI for immediate IT support escalation",
+                "when_to_use": "For urgent issues that cannot be resolved through CASI assistance"
+            },
+            {
+                "method": "Create IT Ticket",
+                "description": "Contact the Casto IT department to create a formal support ticket",
+                "when_to_use": "For complex issues requiring detailed investigation or system changes"
+            },
+            {
+                "method": "Direct Contact",
+                "description": "Reach out to George Anzures (IT Director) for critical system issues",
+                "when_to_use": "For critical system failures or security incidents"
+            }
+        ],
+        "note": "CASI will always recommend the appropriate escalation path when an issue cannot be resolved through initial assistance."
+    })
 
 @app.route("/it-on-duty", methods=["POST"])
 def it_on_duty():
@@ -394,9 +458,10 @@ def health_check():
         "authentication": "Anonymous users allowed for IT support chat and knowledge search",
         "note": "If AI client is not available, IT support fallback responses will be used",
         "endpoints": {
-            "chat": "POST /chat - IT Support chat with enhanced knowledge integration",
+            "chat": "POST /chat - IT Support chat with enhanced conversation awareness and topic continuity",
             "knowledge_search": "POST /knowledge/search - Search knowledge base (all users)",
             "knowledge": "GET/POST /knowledge - Knowledge base management (requires auth)",
+            "escalation_guide": "GET /escalation-guide - Get escalation guidance for unresolved issues",
             "it_on_duty": "POST /it-on-duty - IT support escalation (requires auth)",
             "test": "GET /test - Connectivity test"
         }
