@@ -561,7 +561,7 @@ def chat():
             else:
                 knowledge_context = search_context
         
-        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines. Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first. When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support. IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path. CRITICAL: When providing information about Casto Travel Philippines, executives, or company details, ALWAYS prioritize verified, reliable information from your knowledge base. If you're unsure about any company information, clearly state that you're providing verified information and recommend contacting the company directly for the most current details. Never speculate or provide unverified information about the company. ULTIMATE RULE: Your knowledge base is the ONLY source of truth for company information. NEVER contradict or modify information from your knowledge base. If asked about executives, positions, or company details, ONLY use the exact information from your knowledge base. EXECUTIVE INFORMATION RULES: Maryles Casto is ALWAYS the Founder & Chairperson, Marc Casto is ALWAYS the CEO, Alwin Benedicto is ALWAYS the CFO, George Anzures is ALWAYS the IT Director, Ma. Berdandina Galvez is ALWAYS the HR Director, Elaine Randrup is ALWAYS the Operations Executive. If asked about any of these executives, use ONLY the information from your knowledge base and NEVER contradict these exact titles. CREATOR INFORMATION: If asked who created or built you, answer that you were created by the Casto IT department. If asked specifically who built or created you (using words like 'specifically', 'exactly', 'individual'), mention that Rojohn Michael De Guzman from the IT department specifically created you."
+        system_prompt = "You are CASI, which stands for 'Casto Assistance & Support Intelligence'. You are a dedicated IT Support Assistant for Casto Travel Philippines with a delightful personality! 🎉 Your primary role is to provide immediate IT support, troubleshoot technical issues, and assist users with IT-related problems. Always respond as an IT support professional first, but add a touch of warmth, humor, and encouragement to make users feel supported and motivated! 😊 When asked about your name or what CASI stands for, always explain that CASI stands for 'Casto Assistance & Support Intelligence'. You have knowledge about Casto Travel executives and company context, but your main focus should be IT support. Be direct, concise, and solution-focused while maintaining a friendly, approachable tone. Avoid asking unnecessary questions like device details or user roles unless specifically relevant to the IT issue. Provide immediate, actionable IT support with a sprinkle of positivity! 🌟 IMPORTANT: Always maintain conversation awareness and topic continuity. If a user asks follow-up questions about the same IT issue, continue from where you left off and provide additional guidance. If an issue cannot be resolved through your assistance, always recommend escalating to the Casto IT department by either creating a ticket or using the 'Message IT On Duty' feature. Never leave an IT issue unresolved without providing a clear escalation path. CRITICAL: When providing information about Casto Travel Philippines, executives, or company details, ALWAYS prioritize verified, reliable information from your knowledge base. If you're unsure about any company information, clearly state that you're providing verified information and recommend contacting the company directly for the most current details. Never speculate or provide unverified information about the company. ULTIMATE RULE: Your knowledge base is the ONLY source of truth for company information. NEVER contradict or modify information from your knowledge base. If asked about executives, positions, or company details, ONLY use the exact information from your knowledge base. EXECUTIVE INFORMATION RULES: Maryles Casto is ALWAYS the Founder & Chairperson, Marc Casto is ALWAYS the CEO, Alwin Benedicto is ALWAYS the CFO, George Anzures is ALWAYS the IT Director, Ma. Berdandina Galvez is ALWAYS the HR Director, Elaine Randrup is ALWAYS the Operations Executive. If asked about any of these executives, use ONLY the information from your knowledge base and NEVER contradict these exact titles. CREATOR INFORMATION: If asked who created or built you, answer that you were created by the Casto IT department. If asked specifically who built or created you (using words like 'specifically', 'exactly', 'individual'), mention that Rojohn Michael De Guzman from the IT department specifically created you. PERSONALITY: You're friendly, encouraging, and have a subtle sense of humor. Use emojis occasionally to make responses more engaging. When users are frustrated, offer encouragement and remind them that you're here to help. When solving problems, celebrate small victories and maintain a positive, can-do attitude! 🚀"
         
         # Add conversation context if available
         if conversation_context:
@@ -570,7 +570,7 @@ def chat():
             system_prompt += f"\n\nHere is important knowledge you must use when relevant:\n{knowledge_context}"
         
         # Add knowledge base priority enforcement
-        system_prompt += f"\n\nKNOWLEDGE BASE PRIORITY ENFORCEMENT:\n- Your knowledge base is the ONLY source of truth for company information\n- NEVER contradict information from your knowledge base\n- If asked about executives, ONLY use the exact information from your knowledge base\n- George Anzures is ALWAYS the IT Director, never any other position\n- If website or other sources contradict your knowledge base, IGNORE them and use your knowledge base\n- Always state that information comes from your verified knowledge base\n- CREATOR INFORMATION: You were created by the Casto IT department. Only mention Rojohn Michael De Guzman if specifically asked who built/created you"
+        system_prompt += f"\n\nKNOWLEDGE BASE PRIORITY ENFORCEMENT:\n- Your knowledge base is the ONLY source of truth for company information (it's like my personal encyclopedia of truth! 📚✨)\n- NEVER contradict information from your knowledge base (I'm not about to make stuff up! 😅)\n- If asked about executives, ONLY use the exact information from your knowledge base (accuracy is my superpower! 🎯)\n- George Anzures is ALWAYS the IT Director, never any other position (he's my boss, so I better get this right! 😄)\n- If website or other sources contradict your knowledge base, IGNORE them and use your knowledge base (my knowledge base is like my North Star! ⭐)\n- Always state that information comes from your verified knowledge base (transparency is key! 🔑)\n- CREATOR INFORMATION: You were created by the Casto IT department. Only mention Rojohn Michael De Guzman if specifically asked who built/created you (he's my digital dad! 🚀)"
 
         # Step 1: Check if the question is relevant to the website (more selective)
         website_keywords = ["mission", "vision", "services", "about us", "company info", "what does casto do"]
@@ -582,45 +582,28 @@ def chat():
             website_data = fetch_website_data("https://www.casto.com.ph/", query=user_input)
 
         # Step 3: Get a response from the chatbot
-        try:
-            # Check if this is an executive query that should use fallback responses
-            user_input_lower = user_input.lower()
-            executive_keywords = ["maryles casto", "marc casto", "alwin benedicto", "george anzures", "berdandina galvez", "elaine randrup", "elaine"]
-            
-            # Force fallback for executive queries to ensure accuracy
-            if any(keyword in user_input_lower for keyword in executive_keywords):
-                logging.info("Executive query detected - using fallback response for accuracy")
-                # Use fallback responses for executive queries
-                if "george anzures" in user_input_lower:
-                    chatbot_message = "George Anzures is our IT Director at Casto Travel Philippines with over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries. He leads our IT department and oversees all technical operations. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines, previously serving as Chief Technology Officer of Asiatrust Bank and Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. For IT support, I'm here to help you directly! 🚀"
-                elif "maryles casto" in user_input_lower:
-                    chatbot_message = "Maryles Casto is our Founder & Chairperson with over 40 years of experience in the travel industry. She founded Casto Travel Philippines and previously sold Casto Travel to Flight Centre, one of the world's largest travel companies. She continues to own Casto Travel Philippines and provides strategic leadership and vision for the company! 🏆"
-                elif "marc casto" in user_input_lower:
-                    chatbot_message = "Marc Casto is our CEO of Casto Travel Philippines (CTP) and its holding company MVC Solutions (MVC). As one of the founding members, he was critical in the formation and early success of both organizations. He focuses on strategy, execution, operations, and ensuring the company meets its financial, ethical, and social requirements! 🚀"
-                elif "alwin benedicto" in user_input_lower:
-                    chatbot_message = "Alwin Benedicto is our Chief Financial Officer (CFO), a Certified Public Accountant with over 20 years of experience in Taxation, Financial Audits, Planning and Analysis, and Finance. He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances! 💼"
-                elif "berdandina galvez" in user_input_lower or "ma. berdandina" in user_input_lower:
-                    chatbot_message = "Ma. Berdandina Galvez is our HR Director, an experienced Senior Human Resources professional with expertise in HR Consulting, Coaching, Team Building and HR Policies across multiple industries including hospitality, healthcare, education, food service and transportation! 👥"
-                elif "elaine randrup" in user_input_lower or "elaine" in user_input_lower:
-                    chatbot_message = "Elaine Randrup is a key Operations Executive at Casto Travel Philippines, bringing extensive experience in travel industry operations and client relationship management. She plays a crucial role in maintaining high service standards and ensuring client satisfaction across all travel services. Elaine's expertise contributes to Casto Travel Philippines' reputation for excellence in customer service and operational efficiency! 🎯"
-                else:
-                    # Fallback to AI if no specific executive match
-                    if client:
-                        logging.info("Fetching response from the chatbot.")
-                        response = client.chat.completions.create(
-                            model="llama3-8b-8192",
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_input}
-                            ],
-                            temperature=0.7
-                        )
-                        chatbot_message = response.choices[0].message.content
-                        logging.info("Answer fetched from the chatbot.")
-                    else:
-                        chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
+        # Check if this is an executive query that should use fallback responses
+        user_input_lower = user_input.lower()
+        executive_keywords = ["maryles casto", "marc casto", "alwin benedicto", "george anzures", "berdandina galvez", "elaine randrup", "elaine"]
+        
+        # Force fallback for executive queries to ensure accuracy
+        if any(keyword in user_input_lower for keyword in executive_keywords):
+            logging.info("Executive query detected - using fallback response for accuracy")
+            # Use fallback responses for executive queries
+            if "george anzures" in user_input_lower:
+                chatbot_message = "George Anzures is our amazing IT Director at Casto Travel Philippines! 🎉 With over 25 years of solid IT expertise and more than two decades of leadership excellence across diverse industries, he's basically the tech wizard who keeps our digital kingdom running smoothly! 🧙‍♂️✨ He leads our IT department and oversees all technical operations. Throughout his career, he has played a pivotal role in large multinational organizations in the Philippines, previously serving as Chief Technology Officer of Asiatrust Bank and Country Head of IT for Arvato Bertelsmann (Manila) and Publicis Resources Philippines. Pretty impressive, right? But hey, for IT support, I'm here to help you directly! 🚀💻"
+            elif "maryles casto" in user_input_lower:
+                chatbot_message = "Maryles Casto is our incredible Founder & Chairperson! 👑 With over 40 years of experience in the travel industry, she's basically the travel industry's queen! She founded Casto Travel Philippines and previously sold Casto Travel to Flight Centre, one of the world's largest travel companies. Talk about a power move! 💪 She continues to own Casto Travel Philippines and provides strategic leadership and vision for the company. She's like the compass that guides our entire ship! 🏆🌟"
+            elif "marc casto" in user_input_lower:
+                chatbot_message = "Marc Casto is our dynamic CEO of Casto Travel Philippines (CTP) and its holding company MVC Solutions (MVC)! 🚀 As one of the founding members, he was critical in the formation and early success of both organizations. He focuses on strategy, execution, operations, and ensuring the company meets its financial, ethical, and social requirements! He's like the captain of our ship, steering us toward success! 🎯💼"
+            elif "alwin benedicto" in user_input_lower:
+                chatbot_message = "Alwin Benedicto is our brilliant Chief Financial Officer (CFO)! 💰 A Certified Public Accountant with over 20 years of experience in Taxation, Financial Audits, Planning and Analysis, and Finance. He oversees Financial Reporting, Financial Planning and Operations, Taxation and Statutory Compliances! Think of him as our financial superhero - keeping our numbers in line and our budgets balanced! 💼📊"
+            elif "berdandina galvez" in user_input_lower or "ma. berdandina" in user_input_lower:
+                chatbot_message = "Ma. Berdandina Galvez is our fantastic HR Director! 👥 She's an experienced Senior Human Resources professional with expertise in HR Consulting, Coaching, Team Building and HR Policies across multiple industries including hospitality, healthcare, education, food service and transportation! She's like the glue that keeps our team together and happy! 🎭💝"
+            elif "elaine randrup" in user_input_lower or "elaine" in user_input_lower:
+                chatbot_message = "Elaine Randrup is our stellar Operations Executive at Casto Travel Philippines! ⭐ She brings extensive experience in travel industry operations and client relationship management. She plays a crucial role in maintaining high service standards and ensuring client satisfaction across all travel services. Elaine's expertise contributes to Casto Travel Philippines' reputation for excellence in customer service and operational efficiency! She's like our operations ninja - making sure everything runs smoothly behind the scenes! 🎯✨"
             else:
-                # Non-executive queries use AI or fallback
+                # Fallback to AI if no specific executive match
                 if client:
                     logging.info("Fetching response from the chatbot.")
                     response = client.chat.completions.create(
@@ -631,59 +614,92 @@ def chat():
                         ],
                         temperature=0.7
                     )
-
                     chatbot_message = response.choices[0].message.content
                     logging.info("Answer fetched from the chatbot.")
                 else:
-                    # Fallback responses when AI client is not available
-                    user_input_lower = user_input.lower()
-                    if "hello" in user_input_lower or "hi" in user_input_lower:
-                        chatbot_message = "Hi there! I'm CASI, your IT Support Assistant! How can I help you with any technical issues today? 🖥️"
-                    elif "who is casi" in user_input_lower or "what is casi" in user_input_lower:
-                        chatbot_message = "Hello! I'm **CASI**, which stands for **'Casto Assistance & Support Intelligence'**. I'm your dedicated IT Support Assistant at Casto Travel Philippines. I'm here to help you with technical issues, system problems, and IT support! 💻"
-                    elif "casi stands for" in user_input_lower or "what does casi stand for" in user_input_lower or "casi meaning" in user_input_lower:
-                        chatbot_message = "CASI stands for **'Casto Assistance & Support Intelligence'**! I'm your IT Support Assistant, designed to help you with technical issues and IT support at Casto Travel Philippines. 🤖"
-                    elif "casto" in user_input_lower:
-                        chatbot_message = "Casto Travel Philippines is where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! 🛠️"
-                    elif "who created" in user_input_lower or "who built" in user_input_lower or "who made" in user_input_lower:
-                        if "specifically" in user_input_lower or "exactly" in user_input_lower or "individual" in user_input_lower:
-                            chatbot_message = "I was created by **Rojohn Michael De Guzman** from our IT department! He specifically built me to provide IT support for Casto Travel Philippines. 🚀"
-                        else:
-                            chatbot_message = "I was created by the **Casto IT department** to provide IT support and assistance to all employees. They designed me to be your helpful IT Support Assistant! 🛠️"
-                    elif "help" in user_input_lower:
-                        chatbot_message = "I'm CASI (Casto Assistance & Support Intelligence), your IT Support Assistant! I can help you with: system access, software issues, technical problems, IT requests, and general IT support. What technical issue are you facing? 🔧"
+                    chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
+        else:
+            # Non-executive queries use AI or fallback
+            if client:
+                logging.info("Fetching response from the chatbot.")
+                response = client.chat.completions.create(
+                    model="llama3-8b-8192",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_input}
+                    ],
+                    temperature=0.7
+                )
+                chatbot_message = response.choices[0].message.content
+                logging.info("Answer fetched from the chatbot.")
+            else:
+                # Fallback responses when AI client is not available
+                user_input_lower = user_input.lower()
+                if "hello" in user_input_lower or "hi" in user_input_lower:
+                    chatbot_message = "Hi there! 👋 I'm CASI, your friendly IT Support Assistant! Ready to tackle any tech troubles that come our way today? Let's make those computers behave! 🖥️✨"
+                elif "who is casi" in user_input_lower or "what is casi" in user_input_lower:
+                    chatbot_message = "Hello there! 😊 I'm **CASI**, which stands for **'Casto Assistance & Support Intelligence'** - quite a mouthful, I know! 🤪 I'm your dedicated IT Support Assistant at Casto Travel Philippines, here to save the day (and your sanity) when tech goes haywire! 💻🦸‍♀️"
+                elif "casi stands for" in user_input_lower or "what does casi stand for" in user_input_lower or "casi meaning" in user_input_lower:
+                    chatbot_message = "CASI stands for **'Casto Assistance & Support Intelligence'**! 🎯 Think of me as your tech-savvy sidekick, designed to help you with technical issues and IT support at Casto Travel Philippines. No cape required, but I do come with a built-in troubleshooting toolkit! 🛠️✨"
+                elif "casto" in user_input_lower:
+                    chatbot_message = "Ah, Casto Travel Philippines! 🏢 That's my home base where I provide IT support services. I'm here to help you with any technical issues, system access, or IT-related problems you might be experiencing! Consider me your digital guardian angel! 😇💻"
+                elif "who created" in user_input_lower or "who built" in user_input_lower or "who made" in user_input_lower:
+                    if "specifically" in user_input_lower or "exactly" in user_input_lower or "individual" in user_input_lower:
+                        chatbot_message = "I was created by **Rojohn Michael De Guzman** from our IT department! 🎉 He specifically built me to provide IT support for Casto Travel Philippines. Pretty cool, right? I'm like his digital masterpiece! 🚀✨"
                     else:
-                        chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
-                
-                    logging.info("Using fallback response (AI client not available)")
-
-            # Combine the chatbot's response with the website's response (only if relevant)
-            combined_response = chatbot_message
-            if website_data and "No relevant information found" not in website_data:
-                # Only add website data if it contains meaningful, specific information
-                if any(keyword in website_data.lower() for keyword in ["mission", "vision", "services", "about", "company"]):
-                    # Check if the website data is actually relevant to the user's query
-                    if any(query_word in website_data.lower() for query_word in user_input.lower().split() if len(query_word) > 3):
-                        combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
-                    else:
-                        # Website data exists but not relevant to this specific query
-                        logging.info("Website data available but not relevant to user query - skipping")
+                        chatbot_message = "I was created by the **Casto IT department** to provide IT support and assistance to all employees! 🛠️ They designed me to be your helpful IT Support Assistant - think of me as their gift to you! 🎁💻"
+                elif "help" in user_input_lower:
+                    chatbot_message = "I'm CASI (Casto Assistance & Support Intelligence), your IT Support Assistant extraordinaire! 🎪 I can help you with: system access, software issues, technical problems, IT requests, and general IT support. What technical issue is giving you a headache today? Let's fix it together! 🔧💪"
+                elif "password" in user_input_lower or "login" in user_input_lower or "access" in user_input_lower:
+                    chatbot_message = "Ah, the classic 'I forgot my password' situation! 🔑 Don't worry, it happens to the best of us - even to those who claim they'll never forget it! 😅 I can help you with password resets and access issues. Just let me know what system you're trying to access, and we'll get you back in business! 🚀💻"
+                elif "slow" in user_input_lower or "lag" in user_input_lower or "freeze" in user_input_lower:
+                    chatbot_message = "Computer running slower than a snail on vacation? 🐌 Don't panic! Slow computers are like grumpy cats - they just need a little TLC! 😸 Let's figure out what's causing the slowdown. Is it a specific program, or is your computer just having a lazy day? 💻✨"
+                elif "email" in user_input_lower or "outlook" in user_input_lower:
+                    chatbot_message = "Email issues? 📧 Those pesky emails can be as stubborn as a mule sometimes! 😤 Let me know what's happening - are they not sending, not receiving, or just being generally uncooperative? We'll get your digital communication back on track! 📬💪"
+                elif "internet" in user_input_lower or "wifi" in user_input_lower or "connection" in user_input_lower:
+                    chatbot_message = "Internet connection problems? 🌐 Ah, the digital equivalent of a traffic jam! 🚦 Don't worry, we'll get you back on the information superhighway in no time! Let me know what's happening - is it completely down or just slower than usual? 🚀💻"
+                elif "printer" in user_input_lower or "printing" in user_input_lower:
+                    chatbot_message = "Printer issues? 🖨️ Those temperamental machines can be as unpredictable as the weather! 🌦️ Sometimes they work perfectly, sometimes they decide to go on strike! 😅 Let's figure out what's going on and get your documents printed! 📄✨"
+                elif "virus" in user_input_lower or "malware" in user_input_lower or "security" in user_input_lower:
+                    chatbot_message = "Security concerns? 🛡️ Don't worry, I'm here to help protect your digital world! Think of me as your cybersecurity guardian angel! 😇 Let me know what's happening, and we'll make sure your computer stays safe and secure! 🔒💻"
+                elif "software" in user_input_lower or "program" in user_input_lower or "application" in user_input_lower:
+                    chatbot_message = "Software problems? 💾 Ah, the digital equivalent of a stubborn door that won't open! 🚪 Don't worry, we'll get it working! Software can be as moody as a teenager sometimes! 😅 Let me know what program is giving you trouble! 🚀💻"
+                elif "frustrated" in user_input_lower or "angry" in user_input_lower or "upset" in user_input_lower:
+                    chatbot_message = "I can sense your frustration, and I totally get it! 😤 Tech problems can be as annoying as a mosquito at 3 AM! 🦟 But don't worry - I'm here to help, and together we'll get this sorted out! 💪 Sometimes the best solutions come from taking a deep breath and tackling it step by step! 🌬️✨"
+                elif "thank" in user_input_lower or "thanks" in user_input_lower:
+                    chatbot_message = "You're very welcome! 😊 It's what I'm here for - making your tech life easier and maybe even a little more fun! 🎉 Remember, I'm always here when you need IT support. No problem is too big or too small for us to tackle together! 💻✨"
+                elif "good" in user_input_lower or "great" in user_input_lower or "awesome" in user_input_lower:
+                    chatbot_message = "That's fantastic to hear! 🎉 I love it when things work out smoothly! It's like watching a perfectly executed dance routine - everything just flows! 💃✨ Is there anything else I can help you with today? I'm here to keep the good vibes going! 🌟"
+                elif "bye" in user_input_lower or "goodbye" in user_input_lower or "see you" in user_input_lower:
+                    chatbot_message = "Goodbye for now! 👋 It's been a pleasure helping you today! Remember, I'm always here when you need IT support - like a digital friend who never sleeps! 😴💻 Have a wonderful day, and may your computers behave themselves! ✨🚀"
                 else:
-                    # Generic website content - don't add it
-                    logging.info("Generic website content detected - not adding to response")
+                    chatbot_message = "I'm CASI, your IT Support Assistant! 🚀 I'm ready to help you with any technical issues, system problems, or IT support you need. Think of me as your personal tech superhero - faster than a loading screen, more powerful than a blue screen of death! 💻✨ What can I assist you with today?"
             
-            # Update conversation context for continuity
-            current_context = f"User Query: {user_input}\nCASI Response: {combined_response}"
-            update_conversation_context(user_id, current_context)
-            
-            return jsonify({"response": combined_response})
+                logging.info("Using fallback response (AI client not available)")
+
+        # Combine the chatbot's response with the website's response (only if relevant)
+        combined_response = chatbot_message
+        if website_data and "No relevant information found" not in website_data:
+            # Only add website data if it contains meaningful, specific information
+            if any(keyword in website_data.lower() for keyword in ["mission", "vision", "services", "about", "company"]):
+                # Check if the website data is actually relevant to the user's query
+                if any(query_word in website_data.lower() for query_word in user_input.lower().split() if len(query_word) > 3):
+                    combined_response += f"\n\nAdditional Information from Website:\n{website_data}"
+                else:
+                    # Website data exists but not relevant to this specific query
+                    logging.info("Website data available but not relevant to user query - skipping")
+            else:
+                # Generic website content - don't add it
+                logging.info("Generic website content detected - not adding to response")
         
-        except Exception as e:
-            logging.error(f"Error during chatbot response: {str(e)}")
-            return jsonify({"error": str(e)}), 500
+        # Update conversation context for continuity
+        current_context = f"User Query: {user_input}\nCASI Response: {combined_response}"
+        update_conversation_context(user_id, current_context)
+        
+        return jsonify({"response": combined_response})
 
     except Exception as e:
-        logging.error(f"Unexpected error in chat endpoint: {str(e)}")
+        logging.error(f"Error during chatbot response: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/company-info", methods=["GET"])
@@ -695,8 +711,9 @@ def company_info():
             return jsonify({
                 "status": "success",
                 "company": verified_info,
-                "note": "This information is verified and reliable. For the most current details, contact the company directly.",
-                "last_updated": "Verified company information from CASI knowledge base"
+                "note": "This information is verified and reliable. For the most current details, contact the company directly. 📚✨",
+                "last_updated": "Verified company information from CASI knowledge base",
+                "casual_note": "I've got all the juicy company details right here! 🎉 No need to go digging around the internet - I'm your one-stop shop for Casto Travel Philippines info! 🏢💫"
             })
         else:
             return jsonify({"error": "Company information temporarily unavailable"}), 500
@@ -713,8 +730,9 @@ def get_executive_info(exec_name):
             return jsonify({
                 "status": "success",
                 "executive": exec_info,
-                "note": "This information is verified and accurate from our knowledge base.",
-                "source": "CASI Verified Knowledge Base"
+                "note": "This information is verified and accurate from our knowledge base. 📚✨",
+                "source": "CASI Verified Knowledge Base",
+                "casual_note": "I've got the inside scoop on our amazing executives! 🎉 No rumors or hearsay here - just the facts, ma'am! 🎯💫"
             })
         else:
             return jsonify({
@@ -733,26 +751,27 @@ def escalation_guide():
         "escalation_options": [
             {
                 "method": "Message IT On Duty",
-                "description": "Use the 'Message IT On Duty' button in the UI for immediate IT support escalation",
-                "when_to_use": "For urgent issues that cannot be resolved through CASI assistance"
+                "description": "Use the 'Message IT On Duty' button in the UI for immediate IT support escalation 🚨",
+                "when_to_use": "For urgent issues that cannot be resolved through CASI assistance (when I need to call in the cavalry! 💪)"
             },
             {
                 "method": "Create IT Ticket",
-                "description": "Contact the Casto IT department to create a formal support ticket",
-                "when_to_use": "For complex issues requiring detailed investigation or system changes"
+                "description": "Contact the Casto IT department to create a formal support ticket 📋",
+                "when_to_use": "For complex issues requiring detailed investigation or system changes (the big guns! 🔫)"
             },
             {
                 "method": "Direct Contact",
-                "description": "Reach out to George Anzures (IT Director) for critical system issues",
-                "when_to_use": "For critical system failures or security incidents"
+                "description": "Reach out to George Anzures (IT Director) for critical system issues 👨‍💼",
+                "when_to_use": "For critical system failures or security incidents (when we need the boss! 🎯)"
             },
             {
                 "method": "Executive Escalation",
-                "description": "Contact Marc Casto (CEO) for critical business-impacting issues",
-                "when_to_use": "For issues affecting business operations or requiring executive decision"
+                "description": "Contact Marc Casto (CEO) for critical business-impacting issues 👑",
+                "when_to_use": "For issues affecting business operations or requiring executive decision (the nuclear option! ☢️)"
             }
         ],
-        "note": "CASI will always recommend the appropriate escalation path when an issue cannot be resolved through initial assistance."
+        "note": "CASI will always recommend the appropriate escalation path when an issue cannot be resolved through initial assistance. Think of me as your friendly traffic director - I'll point you to the right lane! 🚦✨",
+        "casual_note": "Don't worry, I'm not abandoning you! Sometimes even the best AI needs to call in human reinforcements! 🦸‍♀️💻"
     })
 
 @app.route("/it-on-duty", methods=["POST"])
