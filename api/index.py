@@ -619,8 +619,16 @@ def chat():
                 else:
                     chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
         else:
+            # Check for Sabre PCC queries first (regardless of AI client availability)
+            user_input_lower = user_input.lower()
+            if "sabre" in user_input_lower and "pcc" in user_input_lower:
+                chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
+            elif "how to emulate on correct pcc in sabre" in user_input_lower:
+                chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
+            elif "sabre" in user_input_lower:
+                chatbot_message = "I can help you with Sabre-related questions! 🚀 If you're asking about the PCC, it's AAAPCC. What specific Sabre assistance do you need today? 💻✨"
             # Non-executive queries use AI or fallback
-            if client:
+            elif client:
                 logging.info("Fetching response from the chatbot.")
                 response = client.chat.completions.create(
                     model="llama3-8b-8192",
@@ -672,12 +680,9 @@ def chat():
                     chatbot_message = "That's fantastic to hear! 🎉 I love it when things work out smoothly! It's like watching a perfectly executed dance routine - everything just flows! 💃✨ Is there anything else I can help you with today? I'm here to keep the good vibes going! 🌟"
                 elif "bye" in user_input_lower or "goodbye" in user_input_lower or "see you" in user_input_lower:
                     chatbot_message = "Goodbye for now! 👋 It's been a pleasure helping you today! Remember, I'm always here when you need IT support - like a digital friend who never sleeps! 😴💻 Have a wonderful day, and may your computers behave themselves! ✨🚀"
-                elif "sabre" in user_input_lower and "pcc" in user_input_lower:
-                    chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
-                elif "how to emulate on correct pcc in sabre" in user_input_lower:
-                    chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
-                elif "sabre" in user_input_lower:
-                    chatbot_message = "I can help you with Sabre-related questions! 🚀 If you're asking about the PCC, it's AAAPCC. What specific Sabre assistance do you need today? 💻✨"
+
+
+
                 else:
                     chatbot_message = "I'm CASI, your IT Support Assistant! 🚀 I'm ready to help you with any technical issues, system problems, or IT support you need. Think of me as your personal tech superhero - faster than a loading screen, more powerful than a blue screen of death! 💻✨ What can I assist you with today?"
             
