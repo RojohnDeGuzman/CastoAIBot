@@ -619,14 +619,16 @@ def chat():
                 else:
                     chatbot_message = "I'm CASI, your IT Support Assistant! I'm ready to help you with any technical issues, system problems, or IT support you need. What can I assist you with today? 💻"
         else:
-            # Check for Sabre PCC queries first (regardless of AI client availability)
+            # Check for Sabre queries first (regardless of AI client availability)
             user_input_lower = user_input.lower()
             if "sabre" in user_input_lower and "pcc" in user_input_lower:
                 chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
             elif "how to emulate on correct pcc in sabre" in user_input_lower:
                 chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
+            elif "how to display company name in sabre" in user_input_lower:
+                chatbot_message = "Emulate this - N*STARNAME! 🎯 That's how to display the company name in Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
             elif "sabre" in user_input_lower:
-                chatbot_message = "I can help you with Sabre-related questions! 🚀 If you're asking about the PCC, it's AAAPCC. What specific Sabre assistance do you need today? 💻✨"
+                chatbot_message = "I can help you with Sabre-related questions! 🚀 If you're asking about the PCC, it's AAAPCC. For company name display, use N*STARNAME. What specific Sabre assistance do you need today? 💻✨"
             # Non-executive queries use AI or fallback
             elif client:
                 logging.info("Fetching response from the chatbot.")
