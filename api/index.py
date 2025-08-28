@@ -674,6 +674,8 @@ def chat():
                     chatbot_message = "Goodbye for now! 👋 It's been a pleasure helping you today! Remember, I'm always here when you need IT support - like a digital friend who never sleeps! 😴💻 Have a wonderful day, and may your computers behave themselves! ✨🚀"
                 elif "sabre" in user_input_lower and "pcc" in user_input_lower:
                     chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
+                elif "how to emulate on correct pcc in sabre" in user_input_lower:
+                    chatbot_message = "AAAPCC! 🎯 That's the correct PCC for Sabre. Is there anything else I can help you with regarding Sabre or any other IT support needs? 💻✨"
                 elif "sabre" in user_input_lower:
                     chatbot_message = "I can help you with Sabre-related questions! 🚀 If you're asking about the PCC, it's AAAPCC. What specific Sabre assistance do you need today? 💻✨"
                 else:
