@@ -607,7 +607,7 @@ def chat():
                 if client:
                     logging.info("Fetching response from the chatbot.")
                     response = client.chat.completions.create(
-                        model="llama3-8b-8192",
+                        model="llama-3.1-8b-instant",
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_input}
@@ -633,7 +633,7 @@ def chat():
             elif client:
                 logging.info("Fetching response from the chatbot.")
                 response = client.chat.completions.create(
-                    model="llama3-8b-8192",
+                    model="llama-3.1-8b-instant",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_input}
