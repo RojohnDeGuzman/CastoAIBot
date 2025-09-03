@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QWidget, QSizePolicy, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QInputDialog, QFileDialog, QProgressBar, QCheckBox
 from PyQt5.QtCore import Qt, QRect, QEasingCurve, QTimer, QPoint, QSize, QPropertyAnimation, QObject, pyqtProperty
 from PyQt5.QtGui import QIcon, QFont, QPainter, QColor, QBrush, QPixmap, QPainterPath, QTextOption, QCursor
-from PyQt5.QtWidgets import QGraphicsOpacityEffect
+from PyQt5.QtWidgets import QGraphicsOpacityEffect, QGraphicsDropShadowEffect
 import sys
 import requests
 import json
@@ -31,6 +31,7 @@ import logging
 MUTEX_NAME = "Global\\CASIAppMutex"
 
 SINGLE_INSTANCE_PORT = 54321  # Pick any unused port
+_single_instance_socket = None  # Global socket to keep it open
 
 # Backend configuration - now loaded from config
 BACKEND_URL = get_backend_url()
@@ -124,16 +125,20 @@ def get_network_diagnostics():
 
 def already_running_socket():
     """Returns True if another instance is running, False otherwise."""
+    global _single_instance_socket
+    
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("127.0.0.1", SINGLE_INSTANCE_PORT))
         # Keep the socket open for the life of the app
+        _single_instance_socket = s
         import atexit
-        atexit.register(s.close)
-        return False
+        atexit.register(lambda: _single_instance_socket.close() if _single_instance_socket else None)
+        print("[DEBUG] Socket bind successful - no other instance running")
+        return False  # No other instance running
     except socket.error as e:
-        print(f"[DEBUG] Socket already in use: {e}")
+        print(f"[DEBUG] Socket already in use: {e} - another instance is running")
         return True  # Port is already in use
     except Exception as e:
         print(f"[DEBUG] Socket detection error: {e}")
@@ -509,10 +514,17 @@ class ChatbotWidget(QWidget):
         self.user_first_name = "User"
         self.default_user_pixmap = get_circular_pixmap("default_user.png", 36)
         self.user_pixmap = self.default_user_pixmap
+        self.is_maximized = False
+        self.normal_size = (460, 580)  # Current size
+        self.maximized_size = (600, 750)  # Larger size for maximize
+        self.last_position = None  # Store last position for system tray restore
         self.initUI()
         self.oldPos = self.pos()
         self.typing_animation_timer = None
         self.typing_dot_count = 0
+        
+        # Install event filter to detect window state changes
+        self.installEventFilter(self)
 
     
     def fetch_user_profile(self, access_token):
@@ -554,6 +566,15 @@ class ChatbotWidget(QWidget):
             print(f"Failed to fetch user photo: {e}")
             self.user_pixmap = self.default_user_pixmap
             return False
+
+    def open_link(self, url):
+        """Handle link clicks by opening URLs in the default browser"""
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            print(f"Opened link: {url}")
+        except Exception as e:
+            print(f"Failed to open link {url}: {e}")
 
     def fade_in(self, duration=350):
         self.setWindowOpacity(0)
@@ -624,8 +645,63 @@ class ChatbotWidget(QWidget):
         pass
 
     def eventFilter(self, obj, event):
+        # Handle window state changes for automatic size adjustment
+        if obj == self and event.type() == event.WindowStateChange:
+            self.handle_window_state_change()
+        # Handle resize events to sync button state
+        elif obj == self and event.type() == event.Resize:
+            self.handle_resize_event()
         # Hover animations disabled to prevent button movement
         return super().eventFilter(obj, event)
+    
+    def handle_resize_event(self):
+        """Handle resize events to sync maximize button state."""
+        current_size = (self.width(), self.height())
+        
+        # Check if current size matches maximized size (with small tolerance)
+        if (abs(current_size[0] - self.maximized_size[0]) < 10 and 
+            abs(current_size[1] - self.maximized_size[1]) < 10):
+            # Size matches maximized - update button state
+            if not self.is_maximized:
+                self.maximize_button.setText("❐")
+                self.maximize_button.setToolTip("Restore")
+                self.is_maximized = True
+        # Check if current size matches normal size (with small tolerance)
+        elif (abs(current_size[0] - self.normal_size[0]) < 10 and 
+              abs(current_size[1] - self.normal_size[1]) < 10):
+            # Size matches normal - update button state
+            if self.is_maximized:
+                self.maximize_button.setText("□")
+                self.maximize_button.setToolTip("Maximize")
+                self.is_maximized = False
+    
+    def handle_window_state_change(self):
+        """Handle automatic size adjustment based on window state changes."""
+        # Check if window is being maximized or restored
+        if self.windowState() & Qt.WindowMaximized:
+            # Window is maximized - adjust to larger size
+            if not self.is_maximized:
+                self.auto_maximize()
+        else:
+            # Window is restored - adjust to normal size
+            if self.is_maximized:
+                self.auto_restore()
+    
+    def auto_maximize(self):
+        """Automatically maximize the window size."""
+        self.resize(self.maximized_size[0], self.maximized_size[1])
+        self.maximize_button.setText("❐")
+        self.maximize_button.setToolTip("Restore")
+        self.is_maximized = True
+        self.move_to_right_corner()
+    
+    def auto_restore(self):
+        """Automatically restore the window to normal size."""
+        self.resize(self.normal_size[0], self.normal_size[1])
+        self.maximize_button.setText("□")
+        self.maximize_button.setToolTip("Maximize")
+        self.is_maximized = False
+        self.move_to_right_corner()
 
 
     def initUI(self):
@@ -635,14 +711,18 @@ class ChatbotWidget(QWidget):
         self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         
-        # Clean, consistent dark theme with no gradients
+        # Clean, consistent dark theme with corner line design
         self.setStyleSheet("""
         QWidget {
             background-color: #2c3e50;
             border-radius: 20px;
             color: #ecf0f1;
+            border: 2px solid transparent;
         }
         """)
+        
+        # Enable custom painting for corner lines
+        self.setAttribute(Qt.WA_OpaquePaintEvent)
 
         # Set window icon
         self.setWindowIcon(QIcon(resource_path("CASInew-nbg.png")))
@@ -755,6 +835,27 @@ class ChatbotWidget(QWidget):
         self.clear_button.clicked.connect(self.clear_chat)
         top_bar_layout.addWidget(self.clear_button)
 
+        # Maximize Button
+        self.maximize_button = QPushButton("□")
+        self.maximize_button.setToolTip("Maximize")
+        self.maximize_button.setFixedSize(button_size, button_size)
+        self.maximize_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2ecc71;
+                color: white; 
+                border: none; 
+                border-radius: 17px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: 'Segoe UI', Arial;
+            }
+            QPushButton:hover {
+                background-color: #27ae60;
+            }
+        """)
+        self.maximize_button.clicked.connect(self.toggle_maximize)
+        top_bar_layout.addWidget(self.maximize_button)
+
         # Minimize Button
         self.minimize_button = QPushButton("_")
         self.minimize_button.setToolTip("Minimize")
@@ -801,7 +902,7 @@ class ChatbotWidget(QWidget):
 
         # === CHAT DISPLAY AREA - Clean and organized ===
         self.chat_display_layout = QVBoxLayout()
-        self.chat_display_layout.setAlignment(Qt.AlignTop)
+        self.chat_display_layout.setAlignment(Qt.AlignBottom)
         self.chat_display_layout.setSpacing(6)  # Reduced from 8 for more compact message spacing
         self.chat_display_layout.setContentsMargins(6, 6, 6, 6)  # Reduced from 8 for more compact layout
 
@@ -853,30 +954,34 @@ class ChatbotWidget(QWidget):
         """)
         layout.addWidget(scroll_area, 1)  # Give scroll area stretch factor of 1 to take up available space
 
-        # === ACTION BUTTONS - Enhanced spacing and layout ===
+        # === ACTION BUTTONS - Enhanced alignment and styling ===
         prompt_layout = QHBoxLayout()
         prompt_layout.setAlignment(Qt.AlignHCenter)
-        prompt_layout.setSpacing(12)  # Reduced from 20 for tighter button spacing
-        prompt_layout.setContentsMargins(8, 4, 8, 0)  # Reduced top margin from 8 to 4
+        prompt_layout.setSpacing(16)  # Increased spacing for better visual separation
+        prompt_layout.setContentsMargins(12, 8, 12, 4)  # Better margins for visual balance
 
-        self.prompt_label = ClickableLabel("🚧 Under Maintenance")
+        # Left button - Under Maintenance
+        self.prompt_label = ClickableLabel("🛠️ Under Maintenance")
         self.prompt_label.setStyleSheet("""
             QLabel {
-                color: #1abc9c;
+                color: #ecf0f1;
                 background-color: #34495e;
-                border-radius: 12px;
-                padding: 10px 16px;
-                font-size: 12px;
-                font-weight: 500;
-                min-width: 110px;
-                max-width: 140px;
-                min-height: 18px;
-                border: 1px solid #34495e;
+                border-radius: 16px;
+                padding: 12px 20px;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 140px;
+                max-width: 160px;
+                min-height: 20px;
+                border: 2px solid #34495e;
                 font-family: 'Segoe UI', Arial;
+                text-align: center;
             }
             QLabel:hover {
-                border: 1px solid #2ecc71;
+                border: 2px solid #1abc9c;
                 background-color: #2c3e50;
+                color: #1abc9c;
+                transform: translateY(-1px);
             }
         """)
         self.prompt_label.setAlignment(Qt.AlignCenter)
@@ -884,24 +989,28 @@ class ChatbotWidget(QWidget):
         prompt_layout.addStretch(1)  # Left spacer for centering
         prompt_layout.addWidget(self.prompt_label)
 
-        self.it_message_label = ClickableLabel("Message IT On Duty")
+        # Right button - Message IT On Duty
+        self.it_message_label = ClickableLabel("✉️ Message IT On Duty")
         self.it_message_label.setStyleSheet("""
             QLabel {
-                color: #1abc9c;
+                color: #ecf0f1;
                 background-color: #34495e;
-                border-radius: 12px;
-                padding: 10px 16px;
-                font-size: 12px;
-                font-weight: 500;
-                min-width: 110px;
-                max-width: 140px;
-                min-height: 18px;
-                border: 1px solid #34495e;
+                border-radius: 16px;
+                padding: 12px 20px;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 140px;
+                max-width: 160px;
+                min-height: 20px;
+                border: 2px solid #34495e;
                 font-family: 'Segoe UI', Arial;
+                text-align: center;
             }
             QLabel:hover {
-                border: 1px solid #2ecc71;
+                border: 2px solid #1abc9c;
                 background-color: #2c3e50;
+                color: #1abc9c;
+                transform: translateY(-1px);
             }
         """)
         self.it_message_label.setAlignment(Qt.AlignCenter)
@@ -1045,22 +1154,15 @@ class ChatbotWidget(QWidget):
         self.add_hover_animation(self.kb_button)
         self.add_hover_animation(self.logout_button)
         self.add_hover_animation(self.clear_button)
+        self.add_hover_animation(self.maximize_button)
         self.add_hover_animation(self.minimize_button)
         self.add_hover_animation(self.close_button)
         self.add_hover_animation(self.send_button)
 
-        # Enhanced starter message with engaging design
+        # Only show generic welcome if not logged in
         cache_path = os.path.join(os.getenv("APPDATA"), "CASI", "token_cache.json")
         if not os.path.exists(cache_path):
-            # Welcome message for new users
-            welcome_messages = [
-                "🚀 **Welcome to CASI!** I'm your AI virtual assistant, providing IT support that never sleeps. How can I help you today? 💻✨",
-                "🌟 **Hello there!** I'm CASI - your dedicated IT Support Assistant. Ready to solve any technical challenges you might have! 🔧💡",
-                "🎯 **Welcome aboard!** I'm CASI, your AI-powered IT companion. Let's tackle those tech issues together! 🚀💻",
-                "✨ **Greetings!** I'm CASI, your intelligent IT Support Assistant. What technical problem can I help you solve today? 🎯🔧"
-            ]
-            import random
-            message = random.choice(welcome_messages)
+            message = "Hi! I'm CASI your AI virtual assistant, providing support that never sleeps. How can I help? 😊"
             self.add_message_bubble(message, sender="bot")
         else:
             client_id = "f8c7220e-feea-4490-bd93-d348b8bc023a"
@@ -1069,16 +1171,7 @@ class ChatbotWidget(QWidget):
             user_name = self.fetch_user_profile(access_token)
             self.user_pixmap = self.default_user_pixmap  # Set default first
             self.fetch_user_photo(access_token)           # Fetch and set Office 365 photo
-            
-            # Personalized welcome messages for returning users
-            personalized_messages = [
-                f"🎉 **Welcome back, {user_name}!** I'm CASI, your AI IT Support Assistant. Great to see you again! What can I help you with today? 💻✨",
-                f"🌟 **Hello {user_name}!** I'm CASI, your dedicated IT companion. Ready to tackle any technical challenges? 🔧💡",
-                f"🚀 **Good to see you, {user_name}!** I'm CASI, your intelligent IT Support Assistant. What tech issues need solving today? 🎯🔧",
-                f"✨ **Welcome back, {user_name}!** I'm CASI, your AI-powered IT helper. Let's get those technical problems sorted! 💻🎯"
-            ]
-            import random
-            message = random.choice(personalized_messages)
+            message = f"Hi {user_name}! I'm CASI your AI virtual assistant, providing support that never sleeps. How can I help? 😊"
             self.add_message_bubble(message, sender="bot")
 
         # After login, check if admin and show/hide KB button
@@ -1088,10 +1181,29 @@ class ChatbotWidget(QWidget):
         """Hide the chatbot window instead of closing it."""
         self.fade_out()
 
+    def toggle_maximize(self):
+        """Toggle between normal and maximized size."""
+        if self.is_maximized:
+            # Restore to normal size
+            self.auto_restore()
+        else:
+            # Maximize to larger size
+            self.auto_maximize()
+
     def minimize_widget(self):
         """Minimize the chatbot window to a small icon."""
         self.fade_out()
         QTimer.singleShot(300, self._show_minimized_widget)
+        
+        # Show notification that app is minimized to system tray
+        if hasattr(self, 'system_tray') and self.system_tray:
+            self.system_tray.show_notification(
+                "CASI Assistant", 
+                "CASI is running in the system tray. Click the tray icon to restore the application.",
+                QSystemTrayIcon.Information, 
+                3000
+            )
+    
     def _show_minimized_widget(self):
         self.minimized_widget = MinimizedWidget(self)
         move_to_right_middle(self.minimized_widget)
@@ -1398,6 +1510,7 @@ class ChatbotWidget(QWidget):
             delta = event.globalPos() - self.oldPos
             self.move(self.x() + delta.x(), self.y() + delta.y())
             self.oldPos = event.globalPos()
+            self.save_current_position()  # Save position while dragging
 
     def move_to_right_corner(self):
         """Move the widget to the right corner of the screen."""
@@ -1407,6 +1520,18 @@ class ChatbotWidget(QWidget):
         x = screen_geometry.width() - widget_geometry.width() - 10  # 10 pixels from the right edge
         y = screen_geometry.height() - widget_geometry.height() - 10  # 10 pixels from the bottom edge
         self.move(x, y)
+        self.save_current_position()
+    
+    def save_current_position(self):
+        """Save the current window position."""
+        self.last_position = self.pos()
+    
+    def restore_to_last_position(self):
+        """Restore window to the last saved position."""
+        if self.last_position:
+            self.move(self.last_position)
+        else:
+            self.move_to_right_corner()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -1421,8 +1546,31 @@ class ChatbotWidget(QWidget):
         painter.setPen(Qt.NoPen)  # No outline
         painter.drawRoundedRect(rect, radius, radius)
         
+        # Draw corner line design
+        self.draw_corner_lines(painter, rect)
+        
         # This is crucial to ensure all child widgets (buttons, text, etc.) are drawn
         super().paintEvent(event)
+    
+    def draw_corner_lines(self, painter, rect):
+        """Draw thin border lines around the entire widget"""
+        # Set up the pen for border lines - thin and green like input hover
+        pen = painter.pen()
+        pen.setColor(QColor("#2ecc71"))  # Same green as input field hover
+        pen.setWidth(1)  # Very thin line
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setStyle(Qt.SolidLine)
+        painter.setPen(pen)
+        
+        # Draw border around the entire widget with rounded corners
+        border_margin = 2  # Small margin from the edge
+        
+        # Create a rounded rectangle path for the border
+        border_rect = rect.adjusted(border_margin, border_margin, -border_margin, -border_margin)
+        radius = 18.0  # Slightly smaller radius to account for border
+        
+        # Draw the border as a rounded rectangle outline
+        painter.drawRoundedRect(border_rect, radius, radius)
 
     def add_message_bubble(self, text, sender="bot"):
         # Create main message container with proper alignment
@@ -1440,10 +1588,14 @@ class ChatbotWidget(QWidget):
         message_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
 
         # === Clean Message Bubble ===
-        message_label = QLabel(text)
-        message_label.setWordWrap(True)
-        message_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        message_label.setOpenExternalLinks(True)
+        # Use LinkLabel for HTML content, regular QLabel for plain text
+        if '<a href=' in text:
+            message_label = LinkLabel(text)
+        else:
+            message_label = QLabel()
+            message_label.setWordWrap(True)
+            message_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            message_label.setText(text)
         message_label.setMaximumWidth(450)  # Increased from 400 to take advantage of extra window space
         message_label.setMinimumWidth(280)   # Increased from 250 for better minimum width
         message_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Proper text alignment
@@ -1509,6 +1661,16 @@ class ChatbotWidget(QWidget):
                 max-width: 450px;  /* Increased to match new message label width */
                 min-width: 280px;  /* Increased to match new message label width */
             """)
+            # Add link styling for bot messages
+            message_label.setStyleSheet(message_label.styleSheet() + """
+                QLabel a {
+                    color: #3498db;
+                    text-decoration: underline;
+                }
+                QLabel a:hover {
+                    color: #2980b9;
+                }
+            """)
             
         else:  # sender is "user"
             # User: [STRETCH] [BUBBLE] [ICON] - Right aligned
@@ -1530,6 +1692,16 @@ class ChatbotWidget(QWidget):
                 min-height: 24px;
                 max-width: 450px;  /* Increased to match new message label width */
                 min-width: 280px;  /* Increased to match new message label width */
+            """)
+            # Add link styling for user messages
+            message_label.setStyleSheet(message_label.styleSheet() + """
+                QLabel a {
+                    color: #ecf0f1;
+                    text-decoration: underline;
+                }
+                QLabel a:hover {
+                    color: #bdc3c7;
+                }
             """)
             
             # Always add user avatar for proper alignment
@@ -1576,88 +1748,74 @@ class ChatbotWidget(QWidget):
         scroll_area.verticalScrollBar().setValue(scroll_area.verticalScrollBar().maximum())
 
     def show_typing_indicator(self):
-        """Show CASI typing indicator with enhanced engaging design and dynamic animations"""
+        """Show CASI typing indicator with enhanced clean design"""
         # Create typing indicator container
         typing_container = QWidget()
         typing_container.setObjectName("typing_indicator")
-        typing_container.setFixedHeight(70)  # Increased height for better visual impact
+        typing_container.setFixedHeight(60)
         
         # Main layout with proper spacing
         typing_layout = QHBoxLayout(typing_container)
-        typing_layout.setSpacing(15)
-        typing_layout.setContentsMargins(18, 10, 18, 10)
+        typing_layout.setSpacing(12)
+        typing_layout.setContentsMargins(16, 8, 16, 8)
         typing_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-        # Enhanced CASI logo with pulsing animation
+        # Enhanced CASI logo with modern styling
         logo_container = QWidget()
-        logo_container.setFixedSize(44, 44)
+        logo_container.setFixedSize(40, 40)
         logo_container.setObjectName("typing_logo_container")
         
         logo_label = QLabel(logo_container)
         logo_pixmap = QPixmap("CASInew-nbg.png")
         if not logo_pixmap.isNull():
-            logo_label.setPixmap(logo_pixmap.scaled(36, 36, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        logo_label.setFixedSize(36, 36)
+            logo_label.setPixmap(logo_pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        logo_label.setFixedSize(32, 32)
         logo_label.move(4, 4)
         
-        # Enhanced logo styling with gradient and pulsing effect
+        # Modern logo styling with subtle shadow and border
         logo_container.setStyleSheet("""
             QWidget#typing_logo_container {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff, stop:1 #f0f8ff);
-                border: 2px solid #4a90e2;
-                border-radius: 22px;
-                box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+                    stop:0 #ffffff, stop:1 #f8f9fa);
+                border: 1px solid #e9ecef;
+                border-radius: 20px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             }
         """)
 
-        # Dynamic typing messages with engaging content
-        typing_messages = [
-            "🔍 **CASI is analyzing** your request...",
-            "💭 **CASI is thinking** of the best solution...",
-            "⚡ **CASI is processing** your query...",
-            "🎯 **CASI is crafting** your response...",
-            "🚀 **CASI is preparing** the perfect answer...",
-            "✨ **CASI is working** on your solution...",
-            "💡 **CASI is brainstorming** ideas...",
-            "🌟 **CASI is gathering** information..."
-        ]
-        
-        typing_label = QLabel("🔍 **CASI is analyzing** your request...")
+        # Typing message with clean, modern design
+        typing_label = QLabel("CASI is thinking")
         typing_label.setWordWrap(True)
-        typing_label.setMaximumWidth(480)  # Increased to match new message bubble width
-        typing_label.setMinimumWidth(300)   # Increased to match new message bubble width
+        typing_label.setMaximumWidth(450)  # Increased to match new message bubble width
+        typing_label.setMinimumWidth(280)   # Increased to match new message bubble width
         typing_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         typing_label.setObjectName("typing_message")
         
-        # Enhanced modern styling with gradient background
+        # Clean, modern styling
         typing_label.setStyleSheet("""
             QLabel#typing_message {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff, stop:1 #f8f9ff);
-                color: #495057;
-                border: 1px solid #e3f2fd;
-                border-radius: 20px;
-                padding: 18px 22px;
+                background: #ffffff;
+                color: #6c757d;
+                border: 1px solid #e9ecef;
+                border-radius: 18px;
+                padding: 16px 20px;  /* Increased padding to match message bubbles */
                 font-size: 14px;
                 font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-                font-weight: 500;
-                line-height: 1.6;
-                min-height: 26px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                font-weight: 400;
+                line-height: 1.6;  /* Increased line height to match message bubbles */
+                min-height: 24px;
             }
         """)
 
-        # Enhanced animated typing dots with different styles
+        # Animated typing dots
         dots_label = QLabel("")
         dots_label.setObjectName("typing_dots")
         dots_label.setStyleSheet("""
             QLabel#typing_dots {
-                color: #4a90e2;
-                font-size: 18px;
-                font-weight: 600;
-                margin-left: 6px;
-                min-width: 30px;
+                color: #6c757d;
+                font-size: 16px;
+                font-weight: 300;
+                margin-left: 4px;
             }
         """)
 
@@ -1667,156 +1825,162 @@ class ChatbotWidget(QWidget):
         typing_layout.addWidget(dots_label)
         typing_layout.addStretch()
 
-        # Enhanced animation system with multiple phases and engaging content
+        # Enhanced animation system with better timing
         self.typing_animation_timer = QTimer()
         self.typing_phase = 0
         self.typing_dots_count = 0
-        self.typing_message_index = 0
+        self.thinking_timer = QTimer()
         
         def update_typing_animation():
-            # Phase 1: "analyzing" (1.5 seconds)
-            # Phase 2: "thinking" (1.5 seconds)  
-            # Phase 3: "processing" (1.5 seconds)
-            # Phase 4: "typing" with animated dots (continuous)
-            
+            # Phase 1: "thinking" (2 seconds)
+            # Phase 2: "typing" with animated dots (continuous)
             if self.typing_phase == 0:
-                typing_label.setText("🔍 **CASI is analyzing** your request...")
+                typing_label.setText("CASI is thinking")
                 self.typing_phase = 1
+                # Start thinking timer to transition to typing
+                self.thinking_timer.singleShot(2000, lambda: set_typing_phase())
             elif self.typing_phase == 1:
-                typing_label.setText("💭 **CASI is thinking** of the best solution...")
-                self.typing_phase = 2
+                # This will be handled by the thinking timer
+                pass
             elif self.typing_phase == 2:
-                typing_label.setText("⚡ **CASI is processing** your query...")
-                self.typing_phase = 3
-            elif self.typing_phase == 3:
-                typing_label.setText("🎯 **CASI is crafting** your response...")
-                self.typing_phase = 4
-            elif self.typing_phase == 4:
-                typing_label.setText("✨ **CASI is working** on your solution...")
-                self.typing_phase = 5
-            elif self.typing_phase >= 5:
-                # Rotate through engaging messages
-                message = typing_messages[self.typing_message_index % len(typing_messages)]
-                typing_label.setText(message)
-                self.typing_message_index += 1
-            
-            # Enhanced dots animation with different patterns
-            if self.typing_phase >= 1:
-                dot_patterns = ["●", "●●", "●●●", "●●●●", "●●●", "●●", "●", ""]
-                dots = dot_patterns[self.typing_dots_count % len(dot_patterns)]
-                dots_label.setText(dots)
-                self.typing_dots_count += 1
+                # Already in typing phase, just continue
+                pass
+        
+        def set_typing_phase():
+            if self.typing_phase == 1:  # Only change if still in thinking phase
+                typing_label.setText("CASI is typing")
+                self.typing_phase = 2
         
         self.typing_animation_timer.timeout.connect(update_typing_animation)
-        self.typing_animation_timer.start(500)  # Smooth, not too fast
+        self.typing_animation_timer.start(1000)  # Slower for better user experience
 
-        # Enhanced logo breathing animation with proper scaling
+        # Subtle logo breathing animation
         self.logo_breathing_timer = QTimer()
         self.logo_scale = 1.0
         self.logo_breathing_direction = 1
         
         def update_logo_breathing():
             if self.logo_breathing_direction == 1:
-                self.logo_scale += 0.003
-                if self.logo_scale >= 1.015:
-                    self.logo_scale = 1.015
+                self.logo_scale += 0.005
+                if self.logo_scale >= 1.02:
+                    self.logo_scale = 1.02
                     self.logo_breathing_direction = -1
             else:
-                self.logo_scale -= 0.003
-                if self.logo_scale <= 0.985:
-                    self.logo_scale = 0.985
+                self.logo_scale -= 0.005
+                if self.logo_scale <= 0.98:
+                    self.logo_scale = 0.98
                     self.logo_breathing_direction = 1
             
-            # Apply subtle scale effect with proper sizing
-            new_size = int(44 * self.logo_scale)
-            logo_container.setFixedSize(new_size, new_size)
-            logo_label.setFixedSize(int(36 * self.logo_scale), int(36 * self.logo_scale))
+            # Apply subtle scale effect
+            logo_container.setFixedSize(int(40 * self.logo_scale), int(40 * self.logo_scale))
+            logo_label.setFixedSize(int(32 * self.logo_scale), int(32 * self.logo_scale))
             logo_label.move(int(4 * self.logo_scale), int(4 * self.logo_scale))
         
         self.logo_breathing_timer.timeout.connect(update_logo_breathing)
-        self.logo_breathing_timer.start(100)  # Smooth breathing effect
+        self.logo_breathing_timer.start(80)  # Very subtle breathing
 
-        # Enhanced message pulse effect with gradient
+        # Enhanced typing dots animation with different characters
+        self.typing_dots_timer = QTimer()
+        self.dots_animation_phase = 0
+        self.dots_characters = ["●", "●", "●", "●"]
+        
+        def update_typing_dots():
+            # Create a wave-like dot animation
+            if self.typing_phase >= 1:
+                # Animate dots with different opacities
+                dots_text = ""
+                for i in range(4):
+                    if i < (self.dots_animation_phase % 4):
+                        dots_text += "●"  # Full opacity
+                    else:
+                        dots_text += "○"  # Empty circle for variety
+                dots_label.setText(dots_text)
+                self.dots_animation_phase += 1
+        
+        self.typing_dots_timer.timeout.connect(update_typing_dots)
+        self.typing_dots_timer.start(400)  # Slightly slower for better visibility
+        
+        # Enhanced message pulse effect using opacity and border changes
         self.message_pulse_timer = QTimer()
         self.message_pulse_phase = 0
         
         def update_message_pulse():
-            # Create subtle color shift effect
-            colors = [
-                "#f8f9ff", "#f0f8ff", "#e8f4ff", "#e0f0ff", 
-                "#d8ecff", "#e0f0ff", "#e8f4ff", "#f0f8ff"
-            ]
-            current_color = colors[self.message_pulse_phase % len(colors)]
-            
-            # Update styling with subtle color shift
-            typing_label.setStyleSheet(f"""
-                QLabel#typing_message {{
-                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 #ffffff, stop:1 {current_color});
-                    color: #495057;
-                    border: 1px solid #e3f2fd;
-                    border-radius: 20px;
-                    padding: 18px 22px;
-                    font-size: 14px;
-                    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-weight: 500;
-                    line-height: 1.6;
-                    min-height: 26px;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-                }}
-            """)
-            
-            self.message_pulse_phase += 1
+            # Create a subtle breathing effect using border and background changes
+            if self.message_pulse_phase == 0:
+                # Phase 1: Subtle border glow with slight background change
+                typing_label.setStyleSheet("""
+                    QLabel#typing_message {
+                        background: #f8f9ff;
+                        color: #495057;
+                        border: 1px solid #007bff;
+                        border-radius: 18px;
+                        padding: 16px 20px;
+                        font-size: 14px;
+                        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        font-weight: 400;
+                        line-height: 1.6;
+                        min-height: 24px;
+                    }
+                """)
+                self.message_pulse_phase = 1
+            elif self.message_pulse_phase == 1:
+                # Phase 2: Return to normal with smooth transition
+                typing_label.setStyleSheet("""
+                    QLabel#typing_message {
+                        background: #ffffff;
+                        color: #6c757d;
+                        border: 1px solid #e9ecef;
+                        border-radius: 18px;
+                        padding: 16px 20px;
+                        font-size: 14px;
+                        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        font-weight: 400;
+                        line-height: 1.6;
+                        min-height: 24px;
+                    }
+                """)
+                self.message_pulse_phase = 0
         
         self.message_pulse_timer.timeout.connect(update_message_pulse)
-        self.message_pulse_timer.start(200)  # Smooth color transition
+        self.message_pulse_timer.start(800)  # Slower, more subtle pulse
 
         # Add to chat display with enhanced styling
         typing_container.setStyleSheet("""
             QWidget#typing_indicator {
                 background: transparent;
-                margin: 10px 0px;
+                margin: 8px 0px;
+                padding: 4px;
                 border-radius: 20px;
             }
         """)
         
+        # Add subtle shadow effect using QGraphicsDropShadowEffect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(15)
+        shadow_effect.setColor(QColor(0, 0, 0, 30))
+        shadow_effect.setOffset(0, 2)
+        typing_container.setGraphicsEffect(shadow_effect)
+        
         self.chat_display_layout.addWidget(typing_container)
         
-        # Enhanced entrance animation with slide-in and fade-in effects
+        # Add entrance animation with fade-in effect
         fade_in_effect = QGraphicsOpacityEffect(typing_container)
         typing_container.setGraphicsEffect(fade_in_effect)
         fade_in_effect.setOpacity(0.0)
         
-        # Start position for slide-in effect
-        original_pos = typing_container.pos()
-        typing_container.move(original_pos.x() - 20, original_pos.y())
-        
-        # Animate fade in and slide in
+        # Animate fade in
         fade_in_animation = QPropertyAnimation(fade_in_effect, b"opacity")
-        fade_in_animation.setDuration(400)
+        fade_in_animation.setDuration(300)
         fade_in_animation.setStartValue(0.0)
         fade_in_animation.setEndValue(1.0)
         fade_in_animation.setEasingCurve(QEasingCurve.OutCubic)
-        
-        # Slide-in animation
-        slide_animation = QPropertyAnimation(typing_container, b"pos")
-        slide_animation.setDuration(400)
-        slide_animation.setStartValue(typing_container.pos())
-        slide_animation.setEndValue(original_pos)
-        slide_animation.setEasingCurve(QEasingCurve.OutBack)
-        
-        # Start both animations
         fade_in_animation.start()
-        slide_animation.start()
         
         # Smooth scroll to show typing indicator
-        QTimer.singleShot(150, lambda: self.scroll_to_bottom())
-        
-        # Store reference for cleanup
-        self.current_typing_container = typing_container
+        QTimer.singleShot(100, lambda: self.scroll_to_bottom())
 
     def hide_typing_indicator(self):
-        """Remove CASI typing indicator with smooth exit animation"""
+        """Remove CASI typing indicator with smooth cleanup"""
         # Stop all animation timers
         if hasattr(self, 'typing_animation_timer') and self.typing_animation_timer.isActive():
             self.typing_animation_timer.stop()
@@ -1824,49 +1988,19 @@ class ChatbotWidget(QWidget):
             self.logo_breathing_timer.stop()
         if hasattr(self, 'message_pulse_timer') and self.message_pulse_timer.isActive():
             self.message_pulse_timer.stop()
+        if hasattr(self, 'typing_dots_timer') and self.typing_dots_timer.isActive():
+            self.typing_dots_timer.stop()
+        if hasattr(self, 'thinking_timer') and self.thinking_timer.isActive():
+            self.thinking_timer.stop()
         
-        # Find typing indicator for smooth exit animation
-        typing_widget = None
+        # Find and remove typing indicator immediately
         for i in range(self.chat_display_layout.count()):
             widget = self.chat_display_layout.itemAt(i).widget()
             if widget and widget.objectName() == "typing_indicator":
-                typing_widget = widget
+                # Remove immediately without complex animations
+                widget.deleteLater()
+                logging.info("Typing indicator removed successfully")
                 break
-        
-        if typing_widget:
-            # Create smooth exit animation
-            fade_out_effect = QGraphicsOpacityEffect(typing_widget)
-            typing_widget.setGraphicsEffect(fade_out_effect)
-            
-            # Slide-out and fade-out animation
-            original_pos = typing_widget.pos()
-            slide_out_pos = QPoint(original_pos.x() - 30, original_pos.y())
-            
-            # Fade out animation
-            fade_out_animation = QPropertyAnimation(fade_out_effect, b"opacity")
-            fade_out_animation.setDuration(300)
-            fade_out_animation.setStartValue(1.0)
-            fade_out_animation.setEndValue(0.0)
-            fade_out_animation.setEasingCurve(QEasingCurve.InCubic)
-            
-            # Slide out animation
-            slide_out_animation = QPropertyAnimation(typing_widget, b"pos")
-            slide_out_animation.setDuration(300)
-            slide_out_animation.setStartValue(original_pos)
-            slide_out_animation.setEndValue(slide_out_pos)
-            slide_out_animation.setEasingCurve(QEasingCurve.InCubic)
-            
-            # Connect animation finished signal to cleanup
-            def cleanup_typing_indicator():
-                typing_widget.deleteLater()
-                logging.info("Typing indicator removed with smooth animation")
-            
-            fade_out_animation.finished.connect(cleanup_typing_indicator)
-            
-            # Start both animations
-            fade_out_animation.start()
-            slide_out_animation.start()
-            
         else:
             logging.warning("Typing indicator not found for removal")
 
@@ -2449,18 +2583,10 @@ class SystemTrayApp(QSystemTrayIcon):
         # Create context menu
         self.menu = QMenu()
         
-        # Open Chatbot action
+        # Open Chatbot action (simple - no auto-login)
         open_action = QAction("📱 Open Chatbot", self.menu)
-        open_action.triggered.connect(self.show_chatbot)
+        open_action.triggered.connect(self.show_chatbot_simple)
         self.menu.addAction(open_action)
-        
-        # Test Smart Notifications action
-        test_notif_action = QAction("🔔 Test Smart Notifications", self.menu)
-        test_notif_action.triggered.connect(self.test_smart_notifications)
-        self.menu.addAction(test_notif_action)
-        
-        # Separator
-        self.menu.addSeparator()
         
         # Exit action
         exit_action = QAction("❌ Exit CASI", self.menu)
@@ -2482,9 +2608,9 @@ class SystemTrayApp(QSystemTrayIcon):
         print(f"[DEBUG] Tray icon activated: reason={reason}")
         
         if reason == QSystemTrayIcon.Trigger:
-            # Single click - show chatbot
-            print("[DEBUG] Single click detected - showing chatbot")
-            self.show_chatbot()
+            # Single left click - show chatbot at previous position (no auto-login)
+            print("[DEBUG] Single left click detected - showing chatbot at previous position")
+            self.show_chatbot_simple()
         elif reason == QSystemTrayIcon.Context:
             # Right click - show context menu
             print("[DEBUG] Right click detected - showing context menu")
@@ -2493,14 +2619,14 @@ class SystemTrayApp(QSystemTrayIcon):
             else:
                 print("[DEBUG] Warning: Context menu is None!")
         elif reason == QSystemTrayIcon.DoubleClick:
-            # Double click - show chatbot
-            print("[DEBUG] Double click detected - showing chatbot")
+            # Double click - show chatbot with full functionality
+            print("[DEBUG] Double click detected - showing chatbot with full functionality")
             self.show_chatbot()
 
     def show_startup_message(self):
         """Show startup message only if app is minimized."""
         if self.is_app_minimized():
-            self.showMessage("CASI", "The application is running in the system tray.", QSystemTrayIcon.Information, 2000)
+            self.showMessage("CASI Assistant", "CASI is now running in the system tray. Click the tray icon to access the application.", QSystemTrayIcon.Information, 3000)
     
     def is_app_minimized(self):
         """Check if the main chatbot window is minimized or hidden."""
@@ -2589,7 +2715,7 @@ class SystemTrayApp(QSystemTrayIcon):
         return status
         
     def show_chatbot(self):
-        """Show chatbot window."""
+        """Show chatbot window with full functionality (auto-login)."""
         if hasattr(self.chatbot, "minimized_widget") and self.chatbot.minimized_widget is not None:
             self.chatbot.minimized_widget.hide()
             self.chatbot.minimized_widget = None
@@ -2607,6 +2733,47 @@ class SystemTrayApp(QSystemTrayIcon):
             access_token = get_user_token(client_id, tenant_id, cache_path)
             self.chatbot.user_pixmap = self.chatbot.default_user_pixmap
             self.chatbot.fetch_user_photo(access_token)
+    
+    def show_chatbot_simple(self):
+        """Show chatbot window at previous position without auto-login."""
+        if hasattr(self.chatbot, "minimized_widget") and self.chatbot.minimized_widget is not None:
+            self.chatbot.minimized_widget.hide()
+            self.chatbot.minimized_widget = None
+        self.chatbot.fade_in()
+        self.chatbot.restore_to_last_position()  # Restore to last position
+        self.chatbot.activateWindow()
+        # No auto-login, just show the app
+    
+    def show_chatbot_with_login(self):
+        """Show chatbot window with Office 365 login functionality."""
+        if hasattr(self.chatbot, "minimized_widget") and self.chatbot.minimized_widget is not None:
+            self.chatbot.minimized_widget.hide()
+            self.chatbot.minimized_widget = None
+        self.chatbot.fade_in()
+        self.chatbot.restore_to_last_position()  # Restore to last position
+        self.chatbot.activateWindow()
+        
+        # Trigger Office 365 login
+        cache_path = os.path.join(os.getenv("APPDATA"), "CASI", "token_cache.json")
+        if not os.path.exists(cache_path):
+            # Show login dialog
+            login_dialog = Office365LoginDialog(self.chatbot)
+            if login_dialog.exec_() == QDialog.Accepted:
+                # Login successful, fetch user profile
+                client_id = "f8c7220e-feea-4490-bd93-d348b8bc023a"
+                tenant_id = "c5d82738-88fd-49bb-b014-985f8dffbc23"
+                access_token = get_user_token(client_id, tenant_id, cache_path)
+                if access_token:
+                    self.chatbot.user_pixmap = self.chatbot.default_user_pixmap
+                    self.chatbot.fetch_user_photo(access_token)
+        else:
+            # Already logged in, just fetch profile
+            client_id = "f8c7220e-feea-4490-bd93-d348b8bc023a"
+            tenant_id = "c5d82738-88fd-49bb-b014-985f8dffbc23"
+            access_token = get_user_token(client_id, tenant_id, cache_path)
+            if access_token:
+                self.chatbot.user_pixmap = self.chatbot.default_user_pixmap
+                self.chatbot.fetch_user_photo(access_token)
     
     def exit_app(self):
         """Exit the application."""
@@ -2696,6 +2863,54 @@ class ClickableLabel(QLabel):
     def clicked(self):
         # This will be set later by the parent
         pass
+
+class LinkLabel(QLabel):
+    """Custom QLabel that handles HTML links with manual click detection"""
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setWordWrap(True)
+        self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse)
+        self.setOpenExternalLinks(True)
+        self.setTextFormat(Qt.RichText)
+        self.links = []
+        self.extract_links(text)
+        
+    def extract_links(self, text):
+        """Extract links from HTML text for manual handling"""
+        import re
+        link_pattern = r'<a href="([^"]+)"[^>]*>([^<]+)</a>'
+        self.links = re.findall(link_pattern, text)
+        
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            # Get the character position under the mouse
+            pos = event.pos()
+            char_pos = self.get_char_pos(pos)
+            
+            # Check if click is on a link
+            for url, link_text in self.links:
+                if link_text in self.text():
+                    # Simple check - if clicked near a link, open it
+                    if self.text().find(link_text) <= char_pos <= self.text().find(link_text) + len(link_text):
+                        self.open_link(url)
+                        return
+                        
+        super().mousePressEvent(event)
+        
+    def get_char_pos(self, pos):
+        """Get character position from mouse position (simplified)"""
+        # This is a simplified implementation
+        # In a real implementation, you'd need to map pixel positions to character positions
+        return 0
+        
+    def open_link(self, url):
+        """Open link in default browser"""
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            print(f"Opened link: {url}")
+        except Exception as e:
+            print(f"Failed to open link {url}: {e}")
 
 class Office365LoginDialog(QDialog):
     def __init__(self, parent=None):
@@ -3245,8 +3460,8 @@ if __name__ == "__main__":
         if is_running:
             from PyQt5.QtWidgets import QApplication, QMessageBox
             app = QApplication(sys.argv)
-            QMessageBox.critical(None, "CASI Already Running", 
-                               f"CASI is already running.\nOnly one instance can run at a time.\n\nDetection method: {detection_method}")
+            QMessageBox.information(None, "CASI Assistant", 
+                               "CASI is already running in the system tray.\n\nPlease check your system tray for the CASI icon, or close the existing instance before starting a new one.")
             sys.exit(1)
     else:
         print("[DEBUG] Single instance detection disabled")
@@ -3266,6 +3481,7 @@ if __name__ == "__main__":
     print("[DEBUG] ChatbotWidget created")
     global tray  # Ensure tray is global and not garbage collected
     tray = SystemTrayApp(app, chatbot)
+    chatbot.system_tray = tray  # Add reference to system tray
     print("[DEBUG] SystemTrayApp created")
     
     # Ensure system tray is available and visible
