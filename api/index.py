@@ -481,7 +481,7 @@ def add_knowledge():
         access_token = request.json.get("access_token")
         content = request.json.get("content")
         
-        if not access_token:
+        if not access_token:    
             return jsonify({"error": "Authentication required"}), 401
             
         email = get_user_email_from_token(access_token)
