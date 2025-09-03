@@ -49,6 +49,47 @@ session.headers.update({
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 })
 
+def make_links_clickable(text):
+    """Convert URLs in text to clickable links."""
+    import re
+    
+    # First, handle markdown-style links [text](url)
+    markdown_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+    markdown_links = []
+    
+    def replace_markdown_link(match):
+        link_text = match.group(1)
+        url = match.group(2)
+        # Add https:// if URL doesn't have a protocol
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        # Store the HTML link and return a placeholder
+        placeholder = f"__MARKDOWN_LINK_{len(markdown_links)}__"
+        markdown_links.append(f'<a href="{url}" target="_blank" rel="noopener noreferrer">{link_text}</a>')
+        return placeholder
+    
+    # Replace markdown links with placeholders
+    clickable_text = re.sub(markdown_pattern, replace_markdown_link, text)
+    
+    # Then handle plain URLs (http/https/www)
+    url_pattern = r'(https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?|www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?)'
+    
+    def replace_url(match):
+        url = match.group(1)
+        # Add https:// if it starts with www
+        if url.startswith('www.'):
+            url = 'https://' + url
+        return f'<a href="{url}" target="_blank" rel="noopener noreferrer">{url}</a>'
+    
+    # Replace plain URLs with clickable links
+    clickable_text = re.sub(url_pattern, replace_url, clickable_text)
+    
+    # Finally, replace placeholders with actual markdown links
+    for i, link in enumerate(markdown_links):
+        clickable_text = clickable_text.replace(f"__MARKDOWN_LINK_{i}__", link)
+    
+    return clickable_text
+
 @lru_cache(maxsize=100)
 def get_cached_knowledge():
     """Enhanced knowledge base with IT support focus and executive context"""
@@ -704,6 +745,9 @@ def chat():
             else:
                 # Generic website content - don't add it
                 logging.info("Generic website content detected - not adding to response")
+        
+        # Make all links clickable in the combined response
+        combined_response = make_links_clickable(combined_response)
         
         # Update conversation context for continuity
         current_context = f"User Query: {user_input}\nCASI Response: {combined_response}"
